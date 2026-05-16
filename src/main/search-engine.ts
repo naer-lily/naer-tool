@@ -18,14 +18,21 @@ class SearchEngine {
       }
     }
 
-    return { mode: 'main', results: await this.searchFallback(text) }
+    const homeResults = await this.getHomeCommands(text)
+    const fbResults = await this.searchFallback(text)
+    const all = [...homeResults, ...fbResults].sort((a, b) => b.priority - a.priority)
+    return { mode: 'main', results: all.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i })) }
   }
 
-  private async getHomeCommands(): Promise<SearchResult[]> {
+  private async getHomeCommands(filter?: string): Promise<SearchResult[]> {
     const results: SearchResult[] = []
 
     for (const plugin of pluginHost.getAll()) {
       if (plugin.prefix) {
+        if (filter) {
+          const matchText = `${plugin.prefix} ${plugin.name}`.toLowerCase()
+          if (!matchText.includes(filter.toLowerCase())) continue
+        }
         results.push({
           id: `home-${plugin.id}`,
           pluginId: plugin.id,
@@ -39,16 +46,18 @@ class SearchEngine {
       }
     }
 
-    for (const { pluginId, cmd } of await pluginHost.getFallbackCommands()) {
-      results.push({
-        id: cmd.id,
-        pluginId,
-        name: cmd.name,
-        icon: cmd.icon,
-        preview: cmd.description,
-        priority: 10,
-        shortcutIndex: 0
-      })
+    if (!filter) {
+      for (const { pluginId, cmd } of await pluginHost.getFallbackCommands()) {
+        results.push({
+          id: cmd.id,
+          pluginId,
+          name: cmd.name,
+          icon: cmd.icon,
+          preview: cmd.description,
+          priority: 10,
+          shortcutIndex: 0
+        })
+      }
     }
 
     results.sort((a, b) => b.priority - a.priority)
