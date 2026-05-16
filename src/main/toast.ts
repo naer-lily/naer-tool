@@ -43,6 +43,8 @@ export function showScreenToast(message: string): void {
 }
 
 export function destroyToastWindow(): void {
-  toastWindow?.close()
+  try {
+    toastWindow?.close()
+  } catch { /* window already destroyed */ }
   toastWindow = null
 }

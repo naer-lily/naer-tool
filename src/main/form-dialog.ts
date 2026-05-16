@@ -8,8 +8,10 @@ function buildFormHtml(config: FormConfig): string {
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:transparent;overflow:hidden;user-select:none}
-.win{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--bg);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:transparent;overflow:hidden;user-select:none;cursor:default}
+input,select,textarea{cursor:text}
+input[type=checkbox],input[type=radio],button,label,.switch,.chip label{cursor:pointer}
+.win{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
 .title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0}
 .title-bar span{font-size:12px;font-weight:600;color:var(--t1)}
 .title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center}
@@ -43,7 +45,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',s
 .switch-wrap{display:flex;align-items:center;gap:8px}
 .switch-wrap label{font-size:12px;color:var(--t1)}
 </style></head>
-<body style="--bg:rgba(32,32,32,0.94);--t1:#e8e8e8;--t2:#999;--bd:rgba(255,255,255,0.08);--dv:rgba(255,255,255,0.06);--hv:rgba(255,255,255,0.06);--ib:rgba(255,255,255,0.05)">
+<body style="--bg:#202020;--t1:#e8e8e8;--t2:#999;--bd:rgba(255,255,255,0.08);--dv:rgba(255,255,255,0.06);--hv:rgba(255,255,255,0.06);--ib:rgba(255,255,255,0.05)">
 <div class="win">
 <div class="title-bar"><span>${escapeHtml(config.title)}</span><button onclick="window.close()">✕</button></div>
 <div class="body">${fieldsHtml}</div>
@@ -163,14 +165,16 @@ class FormDialogManager {
       }
     })
 
+    const id = formWindow.webContents.id
+
     return new Promise((resolve) => {
-      this.pending.set(formWindow.webContents.id, { resolve, window: formWindow })
+      this.pending.set(id, { resolve, window: formWindow })
 
       formWindow.on('closed', () => {
-        const entry = this.pending.get(formWindow.webContents.id)
+        const entry = this.pending.get(id)
         if (entry) {
           entry.resolve(null)
-          this.pending.delete(formWindow.webContents.id)
+          this.pending.delete(id)
         }
       })
 

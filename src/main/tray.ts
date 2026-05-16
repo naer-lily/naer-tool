@@ -35,6 +35,8 @@ export function createTray(): void {
 }
 
 export function destroyTray(): void {
-  tray?.destroy()
+  try {
+    tray?.destroy()
+  } catch { /* already destroyed */ }
   tray = null
 }
