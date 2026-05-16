@@ -2,12 +2,16 @@ import type { IPlugin, CommandMatch, CommandContext, CommandResult } from '../..
 
 function safeEval(expr: string): string {
   const sanitized = expr.replace(/[^0-9+\-*/().%\s]/g, '').trim()
-  if (!sanitized) return ''
-  const result = Function('"use strict"; return (' + sanitized + ')')()
-  if (typeof result === 'number') {
-    return Number.isInteger(result) ? String(result) : result.toFixed(6).replace(/\.?0+$/, '')
+  if (!sanitized || !/[0-9]/.test(sanitized)) return ''
+  try {
+    const result = Function('"use strict"; return (' + sanitized + ')')()
+    if (typeof result === 'number' && Number.isFinite(result)) {
+      return Number.isInteger(result) ? String(result) : result.toFixed(6).replace(/\.?0+$/, '')
+    }
+    return ''
+  } catch {
+    return ''
   }
-  return ''
 }
 
 const calculatorPlugin: IPlugin = {

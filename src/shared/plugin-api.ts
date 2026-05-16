@@ -70,6 +70,7 @@ export interface SearchResult {
   preview: string
   priority: number
   shortcutIndex: number
+  prefixEntry?: string
 }
 
 export interface SearchResponse {

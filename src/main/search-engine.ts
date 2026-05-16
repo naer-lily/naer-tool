@@ -1,11 +1,11 @@
 import { pluginHost } from './plugin-host'
 import { prefixRegistry } from './prefix-registry'
-import type { SearchResult, SearchResponse, ICommand } from '../shared/plugin-api'
+import type { SearchResult, SearchResponse, ICommand, IFallbackCommand } from '../shared/plugin-api'
 
 class SearchEngine {
   async search(input: string): Promise<SearchResponse> {
     const text = input.trim()
-    if (!text) return { mode: 'main', results: [] }
+    if (!text) return { mode: 'main', results: await this.getHomeCommands() }
 
     const prefixMatch = prefixRegistry.match(text)
     if (prefixMatch) {
@@ -19,6 +19,40 @@ class SearchEngine {
     }
 
     return { mode: 'main', results: await this.searchFallback(text) }
+  }
+
+  private async getHomeCommands(): Promise<SearchResult[]> {
+    const results: SearchResult[] = []
+
+    for (const plugin of pluginHost.getAll()) {
+      if (plugin.prefix) {
+        results.push({
+          id: `home-${plugin.id}`,
+          pluginId: plugin.id,
+          name: plugin.name,
+          icon: plugin.icon,
+          preview: `输入 ${plugin.prefix} 进入${plugin.name}`,
+          priority: 100,
+          shortcutIndex: 0,
+          prefixEntry: plugin.prefix
+        })
+      }
+    }
+
+    for (const { pluginId, cmd } of await pluginHost.getFallbackCommands()) {
+      results.push({
+        id: cmd.id,
+        pluginId,
+        name: cmd.name,
+        icon: cmd.icon,
+        preview: cmd.description,
+        priority: 10,
+        shortcutIndex: 0
+      })
+    }
+
+    results.sort((a, b) => b.priority - a.priority)
+    return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
   }
 
   async searchSubcommand(pluginId: string, subInput: string): Promise<SearchResult[]> {
@@ -77,9 +111,18 @@ class SearchEngine {
 
     const commands = await plugin.buildCommands({})
     const command = commands.find((c: ICommand) => c.id === commandId)
-    if (!command) return null
+    if (command) return command.execute({ input })
 
-    return command.execute({ input })
+    if (plugin.getFallbackCommands) {
+      const fbs = await plugin.getFallbackCommands({})
+      const fb = fbs.find((f: IFallbackCommand) => f.id === commandId)
+      if (fb) {
+        const built = fb.build(input)
+        return built.execute({ input })
+      }
+    }
+
+    return null
   }
 }
 

@@ -7,9 +7,6 @@
         @input="doSearch"
         @keydown="onKeydown"
       />
-      <button class="theme-btn" @click="toggle" :title="theme === 'dark' ? '亮色模式' : '暗色模式'">
-        {{ theme === 'dark' ? '\u2600\uFE0F' : '\u{1F319}' }}
-      </button>
     </div>
 
     <div class="mode-bar" v-if="searchMode === 'subcommand'">
@@ -99,24 +96,6 @@ onMounted(() => {
 
 .header > :first-child {
   flex: 1;
-}
-
-.theme-btn {
-  width: 32px;
-  height: 32px;
-  margin-right: 8px;
-  border: none;
-  border-radius: 6px;
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  font-size: 15px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.theme-btn:hover {
-  background: var(--bg-active);
 }
 
 .toast {

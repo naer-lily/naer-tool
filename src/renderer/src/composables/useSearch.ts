@@ -33,12 +33,6 @@ export function useSearch() {
       return
     }
 
-    if (!text) {
-      results.value = []
-      activeIndex.value = 0
-      return
-    }
-
     const response = await window.naerAPI.search(text)
 
     if (response.mode === 'subcommand') {
@@ -61,12 +55,20 @@ export function useSearch() {
     query.value = ''
     results.value = []
     activeIndex.value = 0
+    doSearch()
   }
 
-  function selectResult(index: number): void {
+  async function selectResult(index: number): Promise<void> {
     const item = results.value[index]
     if (!item) return
-    window.naerAPI.execute(item.pluginId, item.id, query.value)
+
+    if (item.prefixEntry) {
+      query.value = item.prefixEntry
+      await doSearch()
+      return
+    }
+
+    await window.naerAPI.execute(item.pluginId, item.id, query.value)
     query.value = ''
     results.value = []
     activeIndex.value = 0
