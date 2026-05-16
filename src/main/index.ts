@@ -180,13 +180,10 @@ function registerShortcuts(): void {
 function registerIpc(): void {
   ipcMain.handle(IPC.SEARCH, async (_event, payload: { text: string; pluginId?: string }) => {
     if (payload.pluginId) {
-      const sub = await searchEngine.searchSubcommand(payload.pluginId, payload.text)
-      const fb = await searchEngine.searchFallback(payload.text)
-      const all = [...sub, ...fb].sort((a, b) => b.priority - a.priority)
       return {
         mode: 'subcommand',
         pluginId: payload.pluginId,
-        results: all.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
+        results: await searchEngine.searchSubcommand(payload.pluginId, payload.text)
       }
     }
     return searchEngine.search(payload.text)

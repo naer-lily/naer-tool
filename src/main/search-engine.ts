@@ -77,11 +77,30 @@ class SearchEngine {
       }
     }
 
+    if (plugin.getFallbackCommands) {
+      const fbs = await plugin.getFallbackCommands({})
+      for (const fb of fbs) {
+        if (fb.matches(subInput)) {
+          const built = fb.build(subInput)
+          const m = built.match(subInput)
+          results.push({
+            id: built.id,
+            pluginId,
+            name: built.name,
+            icon: built.icon || fb.icon,
+            preview: m?.preview ?? fb.description,
+            priority: m?.priority ?? 0,
+            shortcutIndex: 0
+          })
+        }
+      }
+    }
+
     results.sort((a, b) => b.priority - a.priority)
     return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
   }
 
-  async searchFallback(input: string): Promise<SearchResult[]> {
+  private async searchFallback(input: string): Promise<SearchResult[]> {
     const entries = await pluginHost.getFallbackCommands()
     const results: SearchResult[] = []
 
