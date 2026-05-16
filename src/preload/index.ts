@@ -29,6 +29,14 @@ const api = {
     return () => {
       ipcRenderer.removeListener(IPC.TOAST, handler)
     }
+  },
+
+  onToggleTheme: (cb: () => void): (() => void) => {
+    const handler = () => cb()
+    ipcRenderer.on('toggle-theme', handler)
+    return () => {
+      ipcRenderer.removeListener('toggle-theme', handler)
+    }
   }
 }
 

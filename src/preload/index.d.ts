@@ -6,6 +6,7 @@ export interface NaerAPI {
   closeWindow(): void
   onFocusInput(cb: () => void): () => void
   onToast(cb: (message: string) => void): () => void
+  onToggleTheme(cb: () => void): () => void
 }
 
 declare global {

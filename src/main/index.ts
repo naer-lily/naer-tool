@@ -1,17 +1,52 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, screen, Tray, Menu, nativeImage, NativeImage } from 'electron'
 import { join } from 'path'
 import { IPC } from '../shared/ipc-channels'
 import { searchEngine } from './search-engine'
 import { pluginHost } from './plugin-host'
 import { prefixRegistry } from './prefix-registry'
 import helloPlugin from './plugins/hello'
+import calculatorPlugin from './plugins/calculator'
+import runPlugin from './plugins/run'
+import reloadPlugin from './plugins/reload'
 
 const WIN_WIDTH = 680
 const WIN_HEIGHT = 400
 
 let mainWindow: BrowserWindow | null = null
 let toastWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 let isActive = false
+
+function createTrayIcon(): NativeImage {
+  const size = 16
+  const buf = Buffer.alloc(size * size * 4)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - size / 2 + 0.5
+      const dy = y - size / 2 + 0.5
+      if (dx * dx + dy * dy < (size / 2 - 1) ** 2) {
+        const offset = (y * size + x) * 4
+        buf[offset] = 210
+        buf[offset + 1] = 110
+        buf[offset + 2] = 50
+        buf[offset + 3] = 255
+      }
+    }
+  }
+  return nativeImage.createFromBitmap(buf, { width: size, height: size })
+}
+
+function createTray(): void {
+  tray = new Tray(createTrayIcon())
+  tray.setToolTip('NaerTool')
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '显示/隐藏', click: toggleWindow },
+    { label: '切换主题', click: () => { mainWindow?.webContents.send('toggle-theme') } },
+    { type: 'separator' },
+    { label: '退出', click: () => { app.quit() } }
+  ]))
+  tray.on('click', toggleWindow)
+}
 
 function createToastWindow(): void {
   toastWindow = new BrowserWindow({
@@ -53,6 +88,12 @@ function showScreenToast(message: string): void {
 function registerBuiltinPlugins(): void {
   pluginHost.registerBuiltin(helloPlugin, 'hello')
   helloPlugin.onActivate({})
+  pluginHost.registerBuiltin(calculatorPlugin, 'calculator')
+  calculatorPlugin.onActivate({})
+  pluginHost.registerBuiltin(runPlugin, 'run')
+  runPlugin.onActivate({})
+  pluginHost.registerBuiltin(reloadPlugin, 'reload')
+  reloadPlugin.onActivate({})
   prefixRegistry.rebuild()
 }
 
@@ -168,6 +209,7 @@ app.whenReady().then(() => {
   registerBuiltinPlugins()
   createToastWindow()
   createWindow()
+  createTray()
   registerShortcuts()
   registerIpc()
 
@@ -186,5 +228,6 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  tray?.destroy()
   toastWindow?.close()
 })

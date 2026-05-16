@@ -69,6 +69,9 @@ onMounted(() => {
     query.value = ''
     nextTick(() => doSearch())
   })
+  window.naerAPI.onToggleTheme(() => {
+    toggle()
+  })
 })
 </script>
 

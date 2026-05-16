@@ -54,6 +54,21 @@ class PluginHost {
     return this.load(pluginId, p)
   }
 
+  async reloadAll(): Promise<IPlugin[]> {
+    const ids = Array.from(this.plugins.keys())
+    const results: IPlugin[] = []
+    for (const id of ids) {
+      const p = this.pluginPaths.get(id)
+      if (!p || p.startsWith('builtin:')) {
+        await this.unload(id)
+        continue
+      }
+      await this.unload(id)
+      results.push(await this.load(id, p))
+    }
+    return results
+  }
+
   registerBuiltin(plugin: IPlugin, id: string): void {
     this.plugins.set(id, plugin)
     this.pluginPaths.set(id, `builtin:${id}`)
