@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext, CommandResult } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
 
 function safeEval(expr: string): string {
   const sanitized = expr.replace(/[^0-9+\-*/().%\s]/g, '').trim()
@@ -39,12 +39,13 @@ const calculatorPlugin: IPlugin = {
         }
         return { preview: `= ${result}`, priority: 10 }
       },
-      async execute(ctx: CommandContext): Promise<CommandResult> {
+      execute(ctx: CommandContext): void {
         const result = safeEval(ctx.input.trim())
         if (!result) {
-          return { type: 'toast', message: '无法计算此表达式' }
+          ctx.toast('无法计算此表达式')
+          return
         }
-        return { type: 'toast', message: `${ctx.input.trim()} = ${result}` }
+        ctx.toast(`${ctx.input.trim()} = ${result}`)
       }
     }]
   },

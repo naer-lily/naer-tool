@@ -1,5 +1,5 @@
 import { exec } from 'child_process'
-import type { IPlugin, CommandMatch, CommandContext, CommandResult } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
 
 const runPlugin: IPlugin = {
   id: 'run',
@@ -22,20 +22,19 @@ const runPlugin: IPlugin = {
         }
         return { preview: `运行: ${trimmed}`, priority: 10 }
       },
-      async execute(ctx: CommandContext): Promise<CommandResult> {
+      execute(ctx: CommandContext): void {
         const cmd = ctx.input.trim()
         if (!cmd) {
-          return { type: 'toast', message: '请输入命令' }
+          ctx.toast('请输入命令')
+          return
         }
-        return new Promise<CommandResult>((resolve) => {
-          exec(cmd, { timeout: 10000 }, (error, stdout, stderr) => {
-            if (error) {
-              resolve({ type: 'toast', message: `错误: ${error.message.slice(0, 80)}` })
-              return
-            }
-            const output = (stdout || stderr).trim().slice(0, 120)
-            resolve({ type: 'toast', message: output || '命令已执行 (无输出)' })
-          })
+        exec(cmd, { timeout: 10000 }, (error, stdout, stderr) => {
+          if (error) {
+            ctx.toast(`错误: ${error.message.slice(0, 80)}`)
+            return
+          }
+          const output = (stdout || stderr).trim().slice(0, 120)
+          ctx.toast(output || '命令已执行 (无输出)')
         })
       }
     }]

@@ -5,12 +5,10 @@ export interface CommandMatch {
 
 export interface CommandContext {
   input: string
+  toast(message: string): void
 }
 
-export type CommandResult =
-  | { type: 'toast'; message: string }
-  | { type: 'openWindow'; config: unknown }
-  | { type: 'none' }
+export type CommandResult = void
 
 export interface ICommand {
   id: string
@@ -18,7 +16,7 @@ export interface ICommand {
   icon?: string
 
   match(input: string): CommandMatch | null
-  execute(ctx: CommandContext): Promise<CommandResult>
+  execute(ctx: CommandContext): void | Promise<void>
 }
 
 export interface IFallbackCommand {

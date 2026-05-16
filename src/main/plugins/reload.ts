@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext, CommandResult } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
 import { pluginHost } from '../plugin-host'
 import { prefixRegistry } from '../prefix-registry'
 
@@ -21,7 +21,7 @@ const reloadPlugin: IPlugin = {
       description: '重新加载所有插件',
       icon: '\u{1F504}',
       matches(input: string): boolean {
-        return input === 'reload' || input === '重载'
+        return !input || input === 'reload' || input === '重载' || 'reload'.startsWith(input) || '重载'.startsWith(input)
       },
       build() {
         return {
@@ -31,13 +31,13 @@ const reloadPlugin: IPlugin = {
           match(): CommandMatch {
             return { preview: '重新加载所有插件', priority: 5 }
           },
-          async execute(_ctx: CommandContext): Promise<CommandResult> {
+          execute(ctx: CommandContext): void {
             try {
               pluginHost.reloadAll()
               prefixRegistry.rebuild()
-              return { type: 'toast', message: '插件已重载' }
+              ctx.toast('插件已重载')
             } catch (e) {
-              return { type: 'toast', message: `重载失败: ${String(e).slice(0, 80)}` }
+              ctx.toast(`重载失败: ${String(e).slice(0, 80)}`)
             }
           }
         }

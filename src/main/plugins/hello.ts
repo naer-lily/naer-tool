@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext, CommandResult } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
 
 const helloPlugin: IPlugin = {
   id: 'hello',
@@ -21,9 +21,9 @@ const helloPlugin: IPlugin = {
         }
         return { preview: `向 ${name} 打招呼`, priority: 10 }
       },
-      async execute(ctx: CommandContext): Promise<CommandResult> {
+      execute(ctx: CommandContext): void {
         const name = ctx.input.trim() || '世界'
-        return { type: 'toast', message: `你好，${name}！\u{1F44B}` }
+        ctx.toast(`你好，${name}！\u{1F44B}`)
       }
     }, {
       id: 'bye',
@@ -33,8 +33,8 @@ const helloPlugin: IPlugin = {
         if (input.trim() && input.trim() !== 'bye') return null
         return { preview: '和所有人说再见', priority: 5 }
       },
-      async execute(_ctx: CommandContext): Promise<CommandResult> {
-        return { type: 'toast', message: '再见！\u{1F44B}' }
+      execute(ctx: CommandContext): void {
+        ctx.toast('再见！\u{1F44B}')
       }
     }]
   },
@@ -56,8 +56,8 @@ const helloPlugin: IPlugin = {
           match(): CommandMatch {
             return { preview: '你好，世界！', priority: 10 }
           },
-          async execute(): Promise<CommandResult> {
-            return { type: 'toast', message: '你好，世界！\u{1F44B}' }
+          execute(ctx: CommandContext): void {
+            ctx.toast('你好，世界！\u{1F44B}')
           }
         }
       }

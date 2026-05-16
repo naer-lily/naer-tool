@@ -41,10 +41,10 @@ class PluginHost {
     this.plugins.delete(pluginId)
 
     const p = this.pluginPaths.get(pluginId)
-    if (p) {
+    if (p && !p.startsWith('builtin:')) {
       delete require.cache[require.resolve(p)]
-      this.pluginPaths.delete(pluginId)
     }
+    this.pluginPaths.delete(pluginId)
   }
 
   async reload(pluginId: string): Promise<IPlugin> {
@@ -59,10 +59,7 @@ class PluginHost {
     const results: IPlugin[] = []
     for (const id of ids) {
       const p = this.pluginPaths.get(id)
-      if (!p || p.startsWith('builtin:')) {
-        await this.unload(id)
-        continue
-      }
+      if (!p || p.startsWith('builtin:')) continue
       await this.unload(id)
       results.push(await this.load(id, p))
     }

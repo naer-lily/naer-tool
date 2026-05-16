@@ -81,7 +81,7 @@ class SearchEngine {
     return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
   }
 
-  private async searchFallback(input: string): Promise<SearchResult[]> {
+  async searchFallback(input: string): Promise<SearchResult[]> {
     const entries = await pluginHost.getFallbackCommands()
     const results: SearchResult[] = []
 
@@ -105,24 +105,28 @@ class SearchEngine {
     return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
   }
 
-  async execute(pluginId: string, commandId: string, input: string): Promise<unknown> {
+  async execute(pluginId: string, commandId: string, input: string, showToast: (msg: string) => void): Promise<void> {
     const plugin = pluginHost.get(pluginId)
-    if (!plugin) return null
+    if (!plugin) return
+
+    const ctx = { input, toast: showToast }
 
     const commands = await plugin.buildCommands({})
     const command = commands.find((c: ICommand) => c.id === commandId)
-    if (command) return command.execute({ input })
+    if (command) {
+      await command.execute(ctx)
+      return
+    }
 
     if (plugin.getFallbackCommands) {
       const fbs = await plugin.getFallbackCommands({})
       const fb = fbs.find((f: IFallbackCommand) => f.id === commandId)
       if (fb) {
         const built = fb.build(input)
-        return built.execute({ input })
+        await built.execute(ctx)
+        return
       }
     }
-
-    return null
   }
 }
 
