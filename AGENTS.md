@@ -35,6 +35,10 @@ src/shared/      Types and constants usable by both main + renderer
 
 ## Plugin System — Critical Rules
 
+### Icon Format
+- `icon` supports both **emoji/text** (e.g. `🔧`) and **inline SVG** (e.g. `<svg viewBox="0 0 24 24" fill="currentColor"><path .../></svg>`)
+- SVGs are rendered via `v-html`; recommended size 18×18px, use `fill="currentColor"` for theme compatibility
+
 ### Loading
 - Built-in plugins live in `src/main/plugins/builtins/`, imported at startup
 - User plugins are `.js` CommonJS modules loaded via `require()` from arbitrary paths listed in config

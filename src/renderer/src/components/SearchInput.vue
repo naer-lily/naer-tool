@@ -1,6 +1,6 @@
 <template>
   <div class="search-input" @click="focusInput">
-    <span v-if="prefixIcon" class="prefix-chip">{{ prefixIcon }}</span>
+    <span v-if="prefixIcon" class="prefix-chip" v-html="prefixIcon"></span>
     <input
       ref="inputEl"
       :value="modelValue"
@@ -64,6 +64,12 @@ onMounted(() => {
   padding: 0 8px;
   border-radius: 5px;
   background: var(--bg-hover);
+  display: inline-flex;
+  align-items: center;
+}
+.prefix-chip :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 
 .input-field {

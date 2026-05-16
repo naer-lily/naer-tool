@@ -10,7 +10,7 @@
     </div>
 
     <div class="mode-bar" v-if="searchMode === 'subcommand'">
-      {{ activePluginIcon }} 子命令模式 · 退格清空返回
+      <span v-html="activePluginIcon"></span> 子命令模式 · 退格清空返回
     </div>
 
     <ResultList
@@ -120,6 +120,13 @@ onMounted(() => {
   font-size: 11px;
   color: var(--text-hint);
   border-bottom: 1px solid var(--border-divider);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mode-bar :deep(svg) {
+  width: 14px;
+  height: 14px;
 }
 </style>
 

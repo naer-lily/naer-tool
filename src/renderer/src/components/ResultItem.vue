@@ -4,7 +4,7 @@
     @click="$emit('select', index)"
     @mouseenter="$emit('hover', index)"
   >
-    <span class="item-icon">{{ item.icon || '\u{1F4E6}' }}</span>
+    <span class="item-icon" v-html="item.icon || '&#x1F4E6;'"></span>
     <span class="item-preview">{{ item.preview }}</span>
     <span class="item-name">{{ item.name }}</span>
     <span class="item-shortcut">Alt+{{ item.shortcutIndex + 1 }}</span>
@@ -44,7 +44,16 @@ defineEmits<{
   font-size: 17px;
   flex-shrink: 0;
   width: 22px;
+  height: 22px;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.item-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 
 .item-preview {
