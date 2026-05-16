@@ -30,6 +30,7 @@ src/shared/      Types and constants usable by both main + renderer
 - `ICommand.match(input: string): CommandMatch | null` — called on EVERY keystroke; returns null if no match
 - `ICommand.execute(ctx)` — called only when user selects the command
 - `IFallbackCommand` — for main-mode matching (no prefix needed)
+- `IPlugin.shouldAutoActivate?(appInfo)` — check foreground window on launcher show to auto-enter subcommand
 
 ### Reload
 - `delete require.cache[pluginPath]` → re-`require()` → `onDeactivate()` old → `onActivate()` new
@@ -39,11 +40,23 @@ src/shared/      Types and constants usable by both main + renderer
 ```
 Renderer input → IPC("search", text)
   → Main checks PrefixRegistry
-    → prefix match → dispatch sub-input to plugin.buildCommands() → each cmd.match(subInput)
-    → no prefix → gather all plugins' fallbackCommands → filter by matches(input)
-  → Return CommandMatch[] (max 9, sorted by priority)
+    → prefix exact match ("hi") OR "prefix space subInput" → dispatch to plugin.buildCommands() + plugin's own fallbackCommands → each cmd.match(subInput)
+    → no prefix, empty → return all prefix-entry results + all fallbackCommands (home screen)
+    → no prefix, non-empty → filter prefix entries by text + gather fallbackCommands by matches(input)
+  → Return SearchResponse { mode, pluginId?, results } (max 9, sorted by priority)
   → Renderer displays results
 ```
+- Home screen prefix entries carry `prefixEntry` field; selecting one calls unified `enterSubcommand(pluginId, icon)`.
+- `enterSubcommand()` is the single entry point — used by prefix match, home entry selection, and auto-activate.
+
+## Toast API
+- `CommandContext.toast(message: string)` — injected function, no return value from `execute()`.
+- Plugins call `ctx.toast(...)` to show screen-bottom floating message; silent otherwise.
+
+## Auto-Activate
+- On window show, `activeWin.sync()` captures foreground window BEFORE `show()`/`focus()`.
+- Each plugin's `shouldAutoActivate?(appInfo): boolean` checked; first match triggers `enterSubcommand()` on renderer.
+- Only one message sent: either `auto-activate` or `focus-input`, never both.
 
 ## Keyboard Navigation
 - `Ctrl+J` / `↓` → next item
