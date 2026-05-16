@@ -10,6 +10,7 @@ const helloPlugin: IPlugin = {
   async onDeactivate() {},
 
   shouldAutoActivate(appInfo: AppInfo): boolean {
+      console.log(appInfo.name)
     return appInfo.name.toLowerCase().includes('notepad')
   },
 

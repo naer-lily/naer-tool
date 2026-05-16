@@ -147,11 +147,11 @@ function showWindow(): void {
   if (!mainWindow) return
   isActive = true
   centerAtTop()
+  checkAutoActivate()
   mainWindow.setOpacity(0)
   mainWindow.show()
   mainWindow.setIgnoreMouseEvents(false)
   mainWindow.focus()
-  checkAutoActivate()
   mainWindow.webContents.send('focus-input')
   setImmediate(() => {
     mainWindow?.setOpacity(1)
