@@ -9,6 +9,16 @@
 ## Directory Architecture
 ```
 src/main/        Electron main process — NO DOM access
+  index.ts          Entry: app lifecycle, builtin plugin registration, shortcut
+  window-manager.ts Search window (create/show/hide/toggle/auto-activate)
+  search-engine.ts  Search dispatch (prefix/subcommand/fallback/home)
+  plugin-host.ts    Plugin lifecycle (load/unload/reload)
+  prefix-registry.ts Prefix → pluginId mapping
+  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/CLOSE)
+  toast.ts          Screen-bottom toast via data-URL BrowserWindow
+  tray.ts           System tray icon + context menu
+  plugins/
+    builtins/       Built-in plugins (hello, calculator, run, reload, plugin-creator)
 src/preload/     contextBridge — exposes typed API to renderer
 src/renderer/    Vue 3 SPA — NO Node.js access
 src/shared/      Types and constants usable by both main + renderer
@@ -17,11 +27,18 @@ src/shared/      Types and constants usable by both main + renderer
 - `src/renderer/` owns: search UI, keyboard navigation, theme rendering
 - Communication: `ipcRenderer` ↔ `ipcMain` via channels defined in `src/shared/ipc-channels.ts`
 
+## Import Conventions
+- `@shared/*` → `src/shared/*` (available in all modules)
+- `@main/*` → `src/main/*` (main process only)
+- `@/*` → `src/renderer/src/*` (renderer only)
+- NEVER use relative imports (`./` or `../`); always use path aliases
+
 ## Plugin System — Critical Rules
 
 ### Loading
-- Built-in plugins live in `src/main/plugins/`, imported at startup
-- User plugins loaded via `require()` from arbitrary paths listed in config
+- Built-in plugins live in `src/main/plugins/builtins/`, imported at startup
+- User plugins are `.js` CommonJS modules loaded via `require()` from arbitrary paths listed in config
+- Plugin-creator (`前缀: 插件`) scaffolds new user plugins with `index.js` + `index.d.ts`
 - **NO automatic hot-reload** — a fallback command "Reload Plugins" manually re-`require()`s from disk
 
 ### Interface (defined in `src/shared/plugin-api.ts`)

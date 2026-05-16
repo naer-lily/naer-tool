@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC } from '../shared/ipc-channels'
-import type { SearchResponse } from '../shared/plugin-api'
+import { IPC } from '@shared/ipc-channels'
+import type { SearchResponse } from '@shared/plugin-api'
 
 const api = {
   search: (text: string, pluginId?: string): Promise<SearchResponse> => {

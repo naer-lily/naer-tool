@@ -26,11 +26,11 @@
 
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue'
-import SearchInput from './components/SearchInput.vue'
-import ResultList from './components/ResultList.vue'
-import { useSearch } from './composables/useSearch'
-import { useKeyboardNav } from './composables/useKeyboardNav'
-import { useTheme } from './composables/useTheme'
+import SearchInput from '@/components/SearchInput.vue'
+import ResultList from '@/components/ResultList.vue'
+import { useSearch } from '@/composables/useSearch'
+import { useKeyboardNav } from '@/composables/useKeyboardNav'
+import { useTheme } from '@/composables/useTheme'
 
 const { theme, toggle } = useTheme()
 const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand } = useSearch()
@@ -76,7 +76,7 @@ onMounted(() => {
 </script>
 
 <style>
-@import './styles/variables.css';
+@import '@/styles/variables.css';
 </style>
 
 <style scoped>

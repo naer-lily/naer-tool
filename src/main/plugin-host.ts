@@ -1,4 +1,4 @@
-import type { IPlugin, IFallbackCommand, ICommand } from '../shared/plugin-api'
+import type { IPlugin, IFallbackCommand, ICommand } from '@shared/plugin-api'
 
 class PluginHost {
   private plugins = new Map<string, IPlugin>()

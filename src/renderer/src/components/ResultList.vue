@@ -17,7 +17,7 @@
 
 <script setup lang="ts">
 import type { SearchResult } from '@shared/plugin-api'
-import ResultItem from './ResultItem.vue'
+import ResultItem from '@/components/ResultItem.vue'
 
 withDefaults(defineProps<{
   items: SearchResult[]

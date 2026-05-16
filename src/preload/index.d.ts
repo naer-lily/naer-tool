@@ -1,4 +1,4 @@
-import type { SearchResponse } from '../shared/plugin-api'
+import type { SearchResponse } from '@shared/plugin-api'
 
 export interface NaerAPI {
   search(text: string, pluginId?: string): Promise<SearchResponse>

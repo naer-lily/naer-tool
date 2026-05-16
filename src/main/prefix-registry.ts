@@ -1,5 +1,5 @@
-import { pluginHost } from './plugin-host'
-import type { IPlugin } from '../shared/plugin-api'
+import { pluginHost } from '@main/plugin-host'
+import type { IPlugin } from '@shared/plugin-api'
 
 class PrefixRegistry {
   private map = new Map<string, string>()

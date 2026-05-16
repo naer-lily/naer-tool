@@ -1,6 +1,6 @@
-import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
-import { pluginHost } from '../plugin-host'
-import { prefixRegistry } from '../prefix-registry'
+import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
+import { pluginHost } from '@main/plugin-host'
+import { prefixRegistry } from '@main/prefix-registry'
 
 const reloadPlugin: IPlugin = {
   id: 'reload',

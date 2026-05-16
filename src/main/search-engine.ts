@@ -1,6 +1,33 @@
-import { pluginHost } from './plugin-host'
-import { prefixRegistry } from './prefix-registry'
-import type { SearchResult, SearchResponse, ICommand, IFallbackCommand } from '../shared/plugin-api'
+import { pluginHost } from '@main/plugin-host'
+import { prefixRegistry } from '@main/prefix-registry'
+import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
+
+const MAX_RESULTS = 9
+
+function normalizeResults(results: SearchResult[]): SearchResult[] {
+  results.sort((a, b) => b.priority - a.priority)
+  return results.slice(0, MAX_RESULTS).map((r, i) => ({ ...r, shortcutIndex: i }))
+}
+
+function collectFallbackResults(cmds: { id: string; name: string; icon?: string; description: string; matches(input: string): boolean; build(input: string): ICommand }[], pluginId: string, input: string): SearchResult[] {
+  const results: SearchResult[] = []
+  for (const cmd of cmds) {
+    if (cmd.matches(input)) {
+      const built = cmd.build(input)
+      const m = built.match(input)
+      results.push({
+        id: built.id,
+        pluginId,
+        name: built.name,
+        icon: built.icon || cmd.icon,
+        preview: m?.preview ?? cmd.description,
+        priority: m?.priority ?? 0,
+        shortcutIndex: 0
+      })
+    }
+  }
+  return results
+}
 
 class SearchEngine {
   async search(input: string): Promise<SearchResponse> {
@@ -20,8 +47,7 @@ class SearchEngine {
 
     const homeResults = await this.getHomeCommands(text)
     const fbResults = await this.searchFallback(text)
-    const all = [...homeResults, ...fbResults].sort((a, b) => b.priority - a.priority)
-    return { mode: 'main', results: all.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i })) }
+    return { mode: 'main', results: normalizeResults([...homeResults, ...fbResults]) }
   }
 
   private async getHomeCommands(filter?: string): Promise<SearchResult[]> {
@@ -60,8 +86,7 @@ class SearchEngine {
       }
     }
 
-    results.sort((a, b) => b.priority - a.priority)
-    return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
+    return normalizeResults(results)
   }
 
   async searchSubcommand(pluginId: string, subInput: string): Promise<SearchResult[]> {
@@ -88,25 +113,10 @@ class SearchEngine {
 
     if (plugin.getFallbackCommands) {
       const fbs = await plugin.getFallbackCommands({})
-      for (const fb of fbs) {
-        if (fb.matches(subInput)) {
-          const built = fb.build(subInput)
-          const m = built.match(subInput)
-          results.push({
-            id: built.id,
-            pluginId,
-            name: built.name,
-            icon: built.icon || fb.icon,
-            preview: m?.preview ?? fb.description,
-            priority: m?.priority ?? 0,
-            shortcutIndex: 0
-          })
-        }
-      }
+      results.push(...collectFallbackResults(fbs, pluginId, subInput))
     }
 
-    results.sort((a, b) => b.priority - a.priority)
-    return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
+    return normalizeResults(results)
   }
 
   private async searchFallback(input: string): Promise<SearchResult[]> {
@@ -115,46 +125,36 @@ class SearchEngine {
 
     for (const { pluginId, cmd } of entries) {
       if (cmd.matches(input)) {
-        const command = cmd.build(input)
-        const match = command.match(input)
-        results.push({
-          id: command.id,
-          pluginId,
-          name: command.name,
-          icon: command.icon || cmd.icon,
-          preview: match?.preview ?? cmd.description,
-          priority: match?.priority ?? 0,
-          shortcutIndex: 0
-        })
+        results.push(...collectFallbackResults([cmd], pluginId, input))
       }
     }
 
-    results.sort((a, b) => b.priority - a.priority)
-    return results.slice(0, 9).map((r, i) => ({ ...r, shortcutIndex: i }))
+    return normalizeResults(results)
   }
 
   async execute(pluginId: string, commandId: string, input: string, showToast: (msg: string) => void): Promise<void> {
     const plugin = pluginHost.get(pluginId)
     if (!plugin) return
 
-    const ctx = { input, toast: showToast }
-
-    const commands = await plugin.buildCommands({})
-    const command = commands.find((c: ICommand) => c.id === commandId)
-    if (command) {
-      await command.execute(ctx)
-      return
+    const ctx: CommandContext = { input, toast: showToast }
+    const cmd = await this.resolveCommand(plugin, commandId, input)
+    if (cmd) {
+      await cmd.execute(ctx)
     }
+  }
+
+  private async resolveCommand(plugin: { buildCommands(ctx: unknown): Promise<ICommand[]>; getFallbackCommands?(ctx: unknown): Promise<IFallbackCommand[]> }, commandId: string, input: string): Promise<ICommand | null> {
+    const commands = await plugin.buildCommands({})
+    const direct = commands.find((c: ICommand) => c.id === commandId)
+    if (direct) return direct
 
     if (plugin.getFallbackCommands) {
       const fbs = await plugin.getFallbackCommands({})
       const fb = fbs.find((f: IFallbackCommand) => f.id === commandId)
-      if (fb) {
-        const built = fb.build(input)
-        await built.execute(ctx)
-        return
-      }
+      if (fb) return fb.build(input)
     }
+
+    return null
   }
 }
 

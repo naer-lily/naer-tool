@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
 
 function safeEval(expr: string): string {
   const sanitized = expr.replace(/[^0-9+\-*/().%\s]/g, '').trim()

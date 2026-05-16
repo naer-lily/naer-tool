@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext, AppInfo } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext, AppInfo } from '@shared/plugin-api'
 
 const helloPlugin: IPlugin = {
   id: 'hello',

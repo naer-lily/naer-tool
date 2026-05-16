@@ -10,7 +10,12 @@
     "downlevelIteration": true,
     "outDir": "./out",
     "declaration": true,
-    "types": ["electron-vite/node"]
+    "types": ["electron-vite/node"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["./src/shared/*"],
+      "@main/*": ["./src/main/*"]
+    }
   },
   "include": [
     "src/main/**/*.ts",

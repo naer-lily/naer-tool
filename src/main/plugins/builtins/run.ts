@@ -1,5 +1,5 @@
 import { exec } from 'child_process'
-import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
 
 const runPlugin: IPlugin = {
   id: 'run',

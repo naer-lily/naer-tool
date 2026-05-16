@@ -23,6 +23,7 @@ Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.
 | Calculator | `=` | Evaluate math expressions safely |
 | RunCommand | `>` | Execute system commands with timeout |
 | Hello | `hi` | Demo plugin: greet/say goodbye |
+| Plugin Creator | `插件` | Scaffold new user plugins (index.js + d.ts) |
 | Reload | — | Fallback: reload all user plugins (match `reload` / `重载`) |
 
 ## Dev
@@ -43,10 +44,19 @@ Output in `out/`.
 ## Architecture
 
 ```
-src/main/     Electron main process — window, tray, plugin host, search engine, auto-activate
-src/preload/  contextBridge — typed IPC API exposed to renderer
-src/renderer/ Vue 3 SPA — search UI, keyboard nav, theme, unified enterSubcommand
-src/shared/   Types and constants usable by both main + renderer
+src/main/          Electron main process
+  index.ts           Entry + app lifecycle + builtin registration
+  window-manager.ts  Search window (create/show/hide/toggle/auto-activate)
+  search-engine.ts   Search dispatch (prefix/subcommand/fallback/home)
+  plugin-host.ts     Plugin lifecycle (load/unload/reload)
+  prefix-registry.ts Prefix → pluginId mapping
+  ipc-handlers.ts    SEARCH/EXECUTE/CLOSE handlers
+  toast.ts           Bottom-screen floating message
+  tray.ts            System tray icon + menu
+  plugins/builtins/  Built-in plugins
+src/preload/       contextBridge — typed IPC API exposed to renderer
+src/renderer/      Vue 3 SPA — search UI, keyboard nav, theme
+src/shared/        Types and constants (both main + renderer)
 ```
 
 ## Plugin API
@@ -58,6 +68,8 @@ Plugins implement `IPlugin` (see `src/shared/plugin-api.ts`):
 - `getFallbackCommands()` — returns commands for main-mode matching (no prefix needed)
 - `shouldAutoActivate(appInfo)` — return `true` to auto-enter subcommand when matching app is focused
 - `ctx.toast(message)` — call from `execute()` to show a screen-bottom toast; silent otherwise
+
+User plugins are **`.js` CommonJS modules** loaded via `require()`. Use the built-in Plugin Creator (prefix `插件`) to scaffold a new plugin with `index.js` + `index.d.ts` type declarations.
 
 ## License
 
