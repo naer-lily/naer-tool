@@ -147,21 +147,25 @@ function showWindow(): void {
   if (!mainWindow) return
   isActive = true
   centerAtTop()
-  checkAutoActivate()
   mainWindow.setOpacity(0)
   mainWindow.show()
   mainWindow.setIgnoreMouseEvents(false)
   mainWindow.focus()
-  mainWindow.webContents.send('focus-input')
   setImmediate(() => {
     mainWindow?.setOpacity(1)
   })
+
+  checkAutoActivate().then((activated) => {
+    if (!activated) {
+      mainWindow?.webContents.send('focus-input')
+    }
+  })
 }
 
-async function checkAutoActivate(): Promise<void> {
+async function checkAutoActivate(): Promise<boolean> {
   try {
     const win = await activeWin()
-    if (!win) return
+    if (!win) return false
     const appInfo: AppInfo = {
       name: win.owner.name,
       path: win.owner.path,
@@ -170,12 +174,13 @@ async function checkAutoActivate(): Promise<void> {
     for (const plugin of pluginHost.getAll()) {
       if (plugin.shouldAutoActivate?.(appInfo)) {
         mainWindow?.webContents.send('auto-activate', plugin.id, plugin.icon)
-        return
+        return true
       }
     }
   } catch {
     // ignore
   }
+  return false
 }
 
 function hideWindow(): void {
