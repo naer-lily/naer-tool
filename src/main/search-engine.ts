@@ -1,5 +1,6 @@
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
+import { formDialog } from '@main/form-dialog'
 import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
 
 const MAX_RESULTS = 9
@@ -136,7 +137,11 @@ class SearchEngine {
     const plugin = pluginHost.get(pluginId)
     if (!plugin) return
 
-    const ctx: CommandContext = { input, toast: showToast }
+    const ctx: CommandContext = {
+      input,
+      toast: showToast,
+      showForm: (config) => formDialog.show(config)
+    }
     const cmd = await this.resolveCommand(plugin, commandId, input)
     if (cmd) {
       await cmd.execute(ctx)

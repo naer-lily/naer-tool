@@ -70,6 +70,13 @@ Renderer input → IPC("search", text)
 - `CommandContext.toast(message: string)` — injected function, no return value from `execute()`.
 - Plugins call `ctx.toast(...)` to show screen-bottom floating message; silent otherwise.
 
+## Form Dialog API
+- `CommandContext.showForm(config: FormConfig)` → `Promise<Record<string, unknown> | null>`
+- Opens a frameless transparent form window with title, fields, and OK/Cancel buttons.
+- Field types: `input`, `number`, `select`, `checkbox`, `radio`, `switch`, `textarea`, `file`
+- Returns `null` on cancel/close, or a key-value object on OK.
+- Plugin-creator uses this for its scaffold form.
+
 ## Auto-Activate
 - On window show, `activeWin.sync()` captures foreground window BEFORE `show()`/`focus()`.
 - Each plugin's `shouldAutoActivate?(appInfo): boolean` checked; first match triggers `enterSubcommand()` on renderer.

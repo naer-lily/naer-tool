@@ -4,4 +4,5 @@ export const IPC = {
   TOAST: 'toast',
   CLOSE: 'close-window',
   GET_THEME: 'get-theme',
+  FORM_SUBMIT: 'form-submit',
 } as const

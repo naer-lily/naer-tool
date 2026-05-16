@@ -3,9 +3,27 @@ export interface CommandMatch {
   priority?: number
 }
 
+export interface FormField {
+  type: 'input' | 'number' | 'select' | 'checkbox' | 'radio' | 'switch' | 'textarea' | 'file'
+  key: string
+  label: string
+  defaultValue?: unknown
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  options?: { label: string; value: string }[]
+}
+
+export interface FormConfig {
+  title: string
+  width?: number
+  fields: FormField[]
+}
+
 export interface CommandContext {
   input: string
   toast(message: string): void
+  showForm(config: FormConfig): Promise<Record<string, unknown> | null>
 }
 
 export type CommandResult = void

@@ -8,25 +8,16 @@ function generatePluginId(name: string): string {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 }
 
-function scaffoldJs(pluginName: string, pluginId: string): string {
+function scaffoldJs(pluginName: string, pluginId: string, pluginIcon: string, prefix: string): string {
   return `// NaerTool 插件: ${pluginName}
 // 用户插件必须是 .js 文件（require() 不能直接加载 TypeScript）
 // 同级目录下的 .d.ts 提供 IDE 类型提示
 
-/**
- * @type {import('naer-tool').IPlugin}
- */
 const plugin = {
-  // 插件唯一标识（必填）
   id: '${pluginId}',
-  // 显示名称（必填）
   name: '${pluginName}',
-  // 显示图标（必填，emoji 或文本字符）
-  icon: '🔧',
-  // 前缀：用户输入 "前缀 " 进入子命令模式（可选，留空则仅提供全局命令）
-  prefix: '',
-
-  // ===== 生命周期 =====
+  icon: '${pluginIcon}',
+  prefix: '${prefix}',
 
   // 插件激活时调用（加载 / 重载后）
   async onActivate() {},
@@ -34,8 +25,7 @@ const plugin = {
   // 插件停用时调用（卸载 / 重载前）
   async onDeactivate() {},
 
-  // ===== 子命令模式 =====
-  // 用户输入 "前缀 " 后，返回的命令列表将显示在搜索结果中
+  // 子命令模式：用户输入 "前缀 " 后返回的命令列表
   async buildCommands() {
     return []
     // 示例:
@@ -52,8 +42,7 @@ const plugin = {
     // }]
   },
 
-  // ===== 全局命令（主模式匹配）=====
-  // 无需前缀，用户在主搜索框输入即可匹配
+  // 全局命令（主模式匹配）：不需要前缀
   async getFallbackCommands() {
     return []
     // 示例:
@@ -75,8 +64,7 @@ const plugin = {
     // }]
   },
 
-  // ===== 自动激活（可选）=====
-  // NaerTool 显示时，若前台窗口匹配则自动进入子命令模式
+  // 自动激活：NaerTool 显示时匹配前台窗口自动进入子命令模式（可选）
   // shouldAutoActivate(appInfo) {
   //   return appInfo.name === 'notepad.exe'
   // },
@@ -91,46 +79,47 @@ function scaffoldDts(): string {
 // 为同级 index.js 提供 IDE 智能提示（无需导入，仅用于类型检查）
 
 declare namespace NaerTool {
-  interface CommandMatch {
-    preview: string
-    priority?: number
-  }
+  interface CommandMatch { preview: string; priority?: number }
 
   interface CommandContext {
-    /** 用户输入的文本 */
     input: string
-    /** 在屏幕底部显示浮动提示 */
     toast(message: string): void
+    showForm(config: NaerTool.FormConfig): Promise<Record<string, unknown> | null>
+  }
+
+  interface FormField {
+    type: 'input' | 'number' | 'select' | 'checkbox' | 'radio' | 'switch' | 'textarea' | 'file'
+    key: string
+    label: string
+    defaultValue?: unknown
+    placeholder?: string
+    required?: boolean
+    disabled?: boolean
+    options?: { label: string; value: string }[]
+  }
+
+  interface FormConfig {
+    title: string
+    width?: number
+    fields: NaerTool.FormField[]
   }
 
   interface ICommand {
-    id: string
-    name: string
-    icon?: string
+    id: string; name: string; icon?: string
     match(input: string): CommandMatch | null
     execute(ctx: CommandContext): void | Promise<void>
   }
 
   interface IFallbackCommand {
-    id: string
-    name: string
-    description: string
-    icon?: string
+    id: string; name: string; description: string; icon?: string
     matches(input: string): boolean
     build(input: string): ICommand
   }
 
-  interface AppInfo {
-    name: string
-    path: string
-    pid: number
-  }
+  interface AppInfo { name: string; path: string; pid: number }
 
   interface IPlugin {
-    id: string
-    name: string
-    icon: string
-    prefix?: string
+    id: string; name: string; icon: string; prefix?: string
     onActivate(ctx: object): Promise<void>
     onDeactivate(): Promise<void>
     buildCommands(ctx: object): Promise<ICommand[]>
@@ -144,46 +133,52 @@ export default plugin
 `
 }
 
-function doCreatePlugin(pluginName: string, showToast: (msg: string) => void): void {
+async function createPluginViaForm(ctx: CommandContext): Promise<void> {
+  const result = await ctx.showForm({
+    title: '创建新插件',
+    width: 440,
+    fields: [
+      { type: 'input', key: 'name', label: '插件名称', defaultValue: ctx.input.trim() || '', placeholder: '我的插件', required: true },
+      { type: 'input', key: 'prefix', label: '前缀（可选）', placeholder: 'my', defaultValue: '' },
+      { type: 'input', key: 'icon', label: '图标（emoji）', defaultValue: '🔧', placeholder: '🔧' },
+      { type: 'file', key: 'folder', label: '目标文件夹', required: true }
+    ]
+  })
+
+  if (!result) {
+    ctx.toast('已取消创建')
+    return
+  }
+
+  const pluginName = String(result.name || '').trim()
+  const prefix = String(result.prefix || '').trim()
+  const icon = String(result.icon || '🔧').trim()
+  const folder = String(result.folder || '').trim()
+
+  if (!pluginName || !folder) {
+    ctx.toast('插件名称和目标文件夹不能为空')
+    return
+  }
+
   const pluginId = generatePluginId(sanitizeFileName(pluginName))
   const safeDirName = sanitizeFileName(pluginId)
 
-  const { dialog } = require('electron')
-  const fs = require('fs')
-  const path = require('path')
+  const fsp = require('fs')
+  const pth = require('path')
+  const pluginDir = pth.join(folder, safeDirName)
 
-  dialog.showOpenDialog({
-    title: `创建插件 "${pluginName}" — 选择父文件夹`,
-    properties: ['openDirectory']
-  }).then((result: { canceled: boolean; filePaths: string[] }) => {
-    if (result.canceled || !result.filePaths.length) {
-      showToast('已取消创建')
+  try {
+    if (fsp.existsSync(pluginDir)) {
+      ctx.toast(`目录已存在: ${pluginDir}`)
       return
     }
-
-    const parentDir = result.filePaths[0]
-    const pluginDir = path.join(parentDir, safeDirName)
-
-    try {
-      if (fs.existsSync(pluginDir)) {
-        showToast(`目录已存在: ${pluginDir}`)
-        return
-      }
-      fs.mkdirSync(pluginDir)
-
-      const jsContent = scaffoldJs(pluginName, pluginId)
-      const dtsContent = scaffoldDts()
-
-      fs.writeFileSync(path.join(pluginDir, 'index.js'), jsContent, 'utf-8')
-      fs.writeFileSync(path.join(pluginDir, 'index.d.ts'), dtsContent, 'utf-8')
-
-      showToast(`插件已创建: ${pluginDir}`)
-    } catch (e) {
-      showToast(`创建失败: ${String(e).slice(0, 80)}`)
-    }
-  }).catch((e: Error) => {
-    showToast(`对话框错误: ${e.message.slice(0, 80)}`)
-  })
+    fsp.mkdirSync(pluginDir)
+    fsp.writeFileSync(pth.join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
+    fsp.writeFileSync(pth.join(pluginDir, 'index.d.ts'), scaffoldDts(), 'utf-8')
+    ctx.toast(`插件已创建: ${pluginDir}`)
+  } catch (e) {
+    ctx.toast(`创建失败: ${String(e).slice(0, 80)}`)
+  }
 }
 
 const pluginCreator: IPlugin = {
@@ -202,26 +197,23 @@ const pluginCreator: IPlugin = {
     return [{
       id: 'create-plugin',
       name: '创建新插件',
-      description: '选择文件夹，创建插件骨架 (index.js + index.d.ts)',
+      description: '填写表单，创建插件骨架 (index.js + index.d.ts)',
       icon: '\u{1F4C1}',
       matches(input: string): boolean {
         if (!input) return true
         const t = input.toLowerCase()
         return '创建插件'.startsWith(t) || '创建新插件'.startsWith(t) || 'create-plugin'.startsWith(t) || 'new-plugin'.startsWith(t)
       },
-      build(input: string) {
-        const pluginName = input.trim() || '新插件'
+      build(_input: string) {
         return {
           id: 'create-plugin',
           name: '创建新插件',
           icon: '\u{1F4C1}',
           match(): CommandMatch {
-            const name = input.trim()
-            if (!name) return { preview: '输入插件名称后回车选择目标文件夹', priority: 10 }
-            return { preview: `创建插件 "${name}" — 回车选择文件夹`, priority: 10 }
+            return { preview: '打开表单 — 填写名称、前缀、图标并选择文件夹', priority: 10 }
           },
-          execute(ctx: CommandContext): void {
-            doCreatePlugin(ctx.input.trim() || '新插件', ctx.toast)
+          async execute(ctx: CommandContext): Promise<void> {
+            await createPluginViaForm(ctx)
           }
         }
       }
