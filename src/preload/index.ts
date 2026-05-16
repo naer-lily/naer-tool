@@ -37,6 +37,14 @@ const api = {
     return () => {
       ipcRenderer.removeListener('toggle-theme', handler)
     }
+  },
+
+  onAutoActivate: (cb: (prefix: string) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, prefix: string) => cb(prefix)
+    ipcRenderer.on('auto-activate', handler)
+    return () => {
+      ipcRenderer.removeListener('auto-activate', handler)
+    }
   }
 }
 

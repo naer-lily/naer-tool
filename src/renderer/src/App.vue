@@ -69,6 +69,10 @@ onMounted(() => {
   window.naerAPI.onToggleTheme(() => {
     toggle()
   })
+  window.naerAPI.onAutoActivate((prefix: string) => {
+    query.value = prefix
+    nextTick(() => doSearch())
+  })
 })
 </script>
 

@@ -1,9 +1,11 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, screen, Tray, Menu, nativeImage, NativeImage } from 'electron'
 import { join } from 'path'
+import activeWin from 'active-win'
 import { IPC } from '../shared/ipc-channels'
 import { searchEngine } from './search-engine'
 import { pluginHost } from './plugin-host'
 import { prefixRegistry } from './prefix-registry'
+import type { AppInfo } from '../shared/plugin-api'
 import helloPlugin from './plugins/hello'
 import calculatorPlugin from './plugins/calculator'
 import runPlugin from './plugins/run'
@@ -149,10 +151,31 @@ function showWindow(): void {
   mainWindow.show()
   mainWindow.setIgnoreMouseEvents(false)
   mainWindow.focus()
+  checkAutoActivate()
   mainWindow.webContents.send('focus-input')
   setImmediate(() => {
     mainWindow?.setOpacity(1)
   })
+}
+
+async function checkAutoActivate(): Promise<void> {
+  try {
+    const win = await activeWin()
+    if (!win) return
+    const appInfo: AppInfo = {
+      name: win.owner.name,
+      path: win.owner.path,
+      pid: win.owner.processId
+    }
+    for (const plugin of pluginHost.getAll()) {
+      if (plugin.shouldAutoActivate?.(appInfo)) {
+        mainWindow?.webContents.send('auto-activate', plugin.prefix ?? '')
+        return
+      }
+    }
+  } catch {
+    // ignore
+  }
 }
 
 function hideWindow(): void {

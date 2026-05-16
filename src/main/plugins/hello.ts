@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext } from '../../shared/plugin-api'
+import type { IPlugin, CommandMatch, CommandContext, AppInfo } from '../../shared/plugin-api'
 
 const helloPlugin: IPlugin = {
   id: 'hello',
@@ -8,6 +8,10 @@ const helloPlugin: IPlugin = {
 
   async onActivate() {},
   async onDeactivate() {},
+
+  shouldAutoActivate(appInfo: AppInfo): boolean {
+    return appInfo.name.toLowerCase().includes('notepad')
+  },
 
   async buildCommands() {
     return [{

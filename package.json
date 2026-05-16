@@ -10,6 +10,7 @@
     "lint": "vue-tsc --noEmit --project tsconfig.web.json && vue-tsc --noEmit --project tsconfig.node.json"
   },
   "dependencies": {
+    "active-win": "^8.2.1",
     "vue": "^3.4.38"
   },
   "devDependencies": {
