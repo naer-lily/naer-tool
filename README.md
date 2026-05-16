@@ -23,7 +23,7 @@ Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.
 | Calculator | `=` | Evaluate math expressions safely |
 | RunCommand | `>` | Execute system commands with timeout |
 | Hello | `hi` | Demo plugin: greet/say goodbye |
-| Plugin Creator | `插件` | Scaffold new user plugins (index.js + d.ts) |
+| Plugin Creator | — | Fallback: scaffold new user plugins (match `创建插件`) |
 | Reload | — | Fallback: reload all user plugins (match `reload` / `重载`) |
 
 ## Dev

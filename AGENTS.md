@@ -38,7 +38,7 @@ src/shared/      Types and constants usable by both main + renderer
 ### Loading
 - Built-in plugins live in `src/main/plugins/builtins/`, imported at startup
 - User plugins are `.js` CommonJS modules loaded via `require()` from arbitrary paths listed in config
-- Plugin-creator (`前缀: 插件`) scaffolds new user plugins with `index.js` + `index.d.ts`
+- Plugin-creator (`创建插件`) scaffolds new user plugins with `index.js` + `index.d.ts`
 - **NO automatic hot-reload** — a fallback command "Reload Plugins" manually re-`require()`s from disk
 
 ### Interface (defined in `src/shared/plugin-api.ts`)

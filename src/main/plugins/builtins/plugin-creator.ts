@@ -86,7 +86,7 @@ module.exports = plugin
 `
 }
 
-function scaffoldDts(pluginName: string): string {
+function scaffoldDts(): string {
   return `// NaerTool 插件类型声明
 // 为同级 index.js 提供 IDE 智能提示（无需导入，仅用于类型检查）
 
@@ -144,68 +144,86 @@ export default plugin
 `
 }
 
+function doCreatePlugin(pluginName: string, showToast: (msg: string) => void): void {
+  const pluginId = generatePluginId(sanitizeFileName(pluginName))
+  const safeDirName = sanitizeFileName(pluginId)
+
+  const { dialog } = require('electron')
+  const fs = require('fs')
+  const path = require('path')
+
+  dialog.showOpenDialog({
+    title: `创建插件 "${pluginName}" — 选择父文件夹`,
+    properties: ['openDirectory']
+  }).then((result: { canceled: boolean; filePaths: string[] }) => {
+    if (result.canceled || !result.filePaths.length) {
+      showToast('已取消创建')
+      return
+    }
+
+    const parentDir = result.filePaths[0]
+    const pluginDir = path.join(parentDir, safeDirName)
+
+    try {
+      if (fs.existsSync(pluginDir)) {
+        showToast(`目录已存在: ${pluginDir}`)
+        return
+      }
+      fs.mkdirSync(pluginDir)
+
+      const jsContent = scaffoldJs(pluginName, pluginId)
+      const dtsContent = scaffoldDts()
+
+      fs.writeFileSync(path.join(pluginDir, 'index.js'), jsContent, 'utf-8')
+      fs.writeFileSync(path.join(pluginDir, 'index.d.ts'), dtsContent, 'utf-8')
+
+      showToast(`插件已创建: ${pluginDir}`)
+    } catch (e) {
+      showToast(`创建失败: ${String(e).slice(0, 80)}`)
+    }
+  }).catch((e: Error) => {
+    showToast(`对话框错误: ${e.message.slice(0, 80)}`)
+  })
+}
+
 const pluginCreator: IPlugin = {
   id: 'plugin-creator',
-  name: '插件管理',
+  name: '创建插件',
   icon: '\u{1F9E9}',
-  prefix: '插件',
 
   async onActivate() {},
   async onDeactivate() {},
 
   async buildCommands() {
+    return []
+  },
+
+  async getFallbackCommands() {
     return [{
       id: 'create-plugin',
       name: '创建新插件',
+      description: '选择文件夹，创建插件骨架 (index.js + index.d.ts)',
       icon: '\u{1F4C1}',
-      match(input: string): CommandMatch | null {
-        const name = input.trim()
-        if (!name) {
-          return { preview: '创建新插件 — 输入插件名称后回车选择文件夹', priority: 10 }
-        }
-        return { preview: `创建插件 "${name}" — 回车选择目标文件夹`, priority: 10 }
+      matches(input: string): boolean {
+        if (!input) return true
+        const t = input.toLowerCase()
+        return '创建插件'.startsWith(t) || '创建新插件'.startsWith(t) || 'create-plugin'.startsWith(t) || 'new-plugin'.startsWith(t)
       },
-      execute(ctx: CommandContext): void {
-        const pluginName = ctx.input.trim() || '新插件'
-        const pluginId = generatePluginId(sanitizeFileName(pluginName))
-        const safeDirName = sanitizeFileName(pluginId)
-
-        const { dialog } = require('electron')
-        const fs = require('fs')
-        const path = require('path')
-
-        dialog.showOpenDialog({
-          title: '选择父文件夹',
-          properties: ['openDirectory']
-        }).then((result: { canceled: boolean; filePaths: string[] }) => {
-          if (result.canceled || !result.filePaths.length) {
-            ctx.toast('已取消创建')
-            return
+      build(input: string) {
+        const pluginName = input.trim() || '新插件'
+        return {
+          id: 'create-plugin',
+          name: '创建新插件',
+          icon: '\u{1F4C1}',
+          match(): CommandMatch {
+            const name = input.trim()
+            if (!name) return { preview: '输入插件名称后回车选择目标文件夹', priority: 10 }
+            return { preview: `创建插件 "${name}" — 回车选择文件夹`, priority: 10 }
+          },
+          execute(ctx: CommandContext): void {
+            doCreatePlugin(ctx.input.trim() || '新插件', ctx.toast)
           }
-
-          const parentDir = result.filePaths[0]
-          const pluginDir = path.join(parentDir, safeDirName)
-
-          try {
-            if (fs.existsSync(pluginDir)) {
-              ctx.toast(`目录已存在: ${pluginDir}`)
-              return
-            }
-            fs.mkdirSync(pluginDir)
-
-            const jsContent = scaffoldJs(pluginName, pluginId)
-            const dtsContent = scaffoldDts(pluginName)
-
-            fs.writeFileSync(path.join(pluginDir, 'index.js'), jsContent, 'utf-8')
-            fs.writeFileSync(path.join(pluginDir, 'index.d.ts'), dtsContent, 'utf-8')
-
-            ctx.toast(`插件已创建: ${pluginDir}`)
-          } catch (e) {
-            ctx.toast(`创建失败: ${String(e).slice(0, 80)}`)
-          }
-        }).catch((e: Error) => {
-          ctx.toast(`对话框错误: ${e.message.slice(0, 80)}`)
-        })
+        }
       }
     }]
   }
