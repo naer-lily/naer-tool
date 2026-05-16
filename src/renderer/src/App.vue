@@ -33,7 +33,7 @@ import { useKeyboardNav } from './composables/useKeyboardNav'
 import { useTheme } from './composables/useTheme'
 
 const { theme, toggle } = useTheme()
-const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand } = useSearch()
+const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand } = useSearch()
 
 function handleEscape(): void {
   if (searchMode.value === 'subcommand') {
@@ -69,9 +69,8 @@ onMounted(() => {
   window.naerAPI.onToggleTheme(() => {
     toggle()
   })
-  window.naerAPI.onAutoActivate((prefix: string) => {
-    query.value = prefix
-    nextTick(() => doSearch())
+  window.naerAPI.onAutoActivate((pluginId: string, icon?: string) => {
+    enterSubcommand(pluginId, icon)
   })
 })
 </script>

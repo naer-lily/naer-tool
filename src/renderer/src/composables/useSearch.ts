@@ -24,6 +24,15 @@ export function useSearch() {
     toastCleanup?.()
   })
 
+  async function enterSubcommand(pluginId: string, icon?: string): Promise<void> {
+    searchMode.value = 'subcommand'
+    activePluginId.value = pluginId
+    activePluginIcon.value = icon || null
+    query.value = ''
+    results.value = (await window.naerAPI.search('', pluginId)).results
+    activeIndex.value = 0
+  }
+
   async function doSearch(): Promise<void> {
     const text = query.value.trim()
 
@@ -36,16 +45,11 @@ export function useSearch() {
     const response = await window.naerAPI.search(text)
 
     if (response.mode === 'subcommand') {
-      searchMode.value = 'subcommand'
-      activePluginId.value = response.pluginId!
-      activePluginIcon.value = response.pluginIcon || null
-      query.value = ''
-      results.value = response.results
+      await enterSubcommand(response.pluginId!, response.pluginIcon)
     } else {
       results.value = response.results
+      activeIndex.value = 0
     }
-
-    activeIndex.value = 0
   }
 
   function exitSubcommand(): void {
@@ -53,8 +57,6 @@ export function useSearch() {
     activePluginId.value = null
     activePluginIcon.value = null
     query.value = ''
-    results.value = []
-    activeIndex.value = 0
     doSearch()
   }
 
@@ -63,8 +65,7 @@ export function useSearch() {
     if (!item) return
 
     if (item.prefixEntry) {
-      query.value = item.prefixEntry
-      await doSearch()
+      await enterSubcommand(item.pluginId, item.icon)
       return
     }
 
@@ -80,6 +81,6 @@ export function useSearch() {
   return {
     query, results, activeIndex, toast,
     searchMode, activePluginId, activePluginIcon,
-    doSearch, selectResult, exitSubcommand
+    doSearch, selectResult, exitSubcommand, enterSubcommand
   }
 }

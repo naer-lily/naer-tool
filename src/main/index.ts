@@ -169,7 +169,7 @@ async function checkAutoActivate(): Promise<void> {
     }
     for (const plugin of pluginHost.getAll()) {
       if (plugin.shouldAutoActivate?.(appInfo)) {
-        mainWindow?.webContents.send('auto-activate', plugin.prefix ?? '')
+        mainWindow?.webContents.send('auto-activate', plugin.id, plugin.icon)
         return
       }
     }

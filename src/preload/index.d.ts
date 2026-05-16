@@ -7,7 +7,7 @@ export interface NaerAPI {
   onFocusInput(cb: () => void): () => void
   onToast(cb: (message: string) => void): () => void
   onToggleTheme(cb: () => void): () => void
-  onAutoActivate(cb: (prefix: string) => void): () => void
+  onAutoActivate(cb: (pluginId: string, icon?: string) => void): () => void
 }
 
 declare global {

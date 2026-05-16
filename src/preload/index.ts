@@ -39,8 +39,8 @@ const api = {
     }
   },
 
-  onAutoActivate: (cb: (prefix: string) => void): (() => void) => {
-    const handler = (_e: Electron.IpcRendererEvent, prefix: string) => cb(prefix)
+  onAutoActivate: (cb: (pluginId: string, icon?: string) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, pluginId: string, icon?: string) => cb(pluginId, icon)
     ipcRenderer.on('auto-activate', handler)
     return () => {
       ipcRenderer.removeListener('auto-activate', handler)
