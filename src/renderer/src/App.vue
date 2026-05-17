@@ -23,11 +23,6 @@
         加载中...
       </div>
     </div>
-      <div v-if="webviewLoading" class="webview-loading">
-        <span class="loading-spinner"></span>
-        加载中...
-      </div>
-    </div>
 
     <div v-if="webviewActive && !webviewLoading" class="webview-bottom"></div>
 
@@ -51,21 +46,15 @@ import { useKeyboardNav } from '@/composables/useKeyboardNav'
 import { useTheme } from '@/composables/useTheme'
 
 const { theme, toggle } = useTheme()
-const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand, webviewActive, webviewLoading, webviewHeight, closeWebView } = useSearch()
+const {
+  query, results, activeIndex, toast,
+  searchMode, activePluginIcon,
+  webviewActive, webviewLoading, webviewHeight,
+  doSearch, selectResult,
+  handleEscape, handleBackspace, handleFocusInput, handleAutoActivate
+} = useSearch()
 
 const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.value || ''))
-
-function handleEscape(): void {
-  if (webviewActive.value) {
-    closeWebView()
-    return
-  }
-  if (searchMode.value === 'subcommand') {
-    exitSubcommand()
-  } else {
-    window.futariAPI.closeWindow()
-  }
-}
 
 const { onKeydown: navKeydown } = useKeyboardNav({
   results,
@@ -80,34 +69,19 @@ function onInput(): void {
 
 function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'Backspace' && !query.value) {
-    if (webviewActive.value) {
-      e.preventDefault()
-      closeWebView()
-      return
-    }
-    if (searchMode.value === 'subcommand') {
-      e.preventDefault()
-      exitSubcommand()
-      return
-    }
+    e.preventDefault()
+    handleBackspace()
+    return
   }
   navKeydown(e)
 }
 
 onMounted(() => {
   doSearch()
-  window.futariAPI.onFocusInput(() => {
-    if (webviewActive.value) return
-    exitSubcommand()
-    query.value = ''
-    nextTick(() => doSearch())
-  })
-  window.futariAPI.onToggleTheme(() => {
-    toggle()
-  })
+  window.futariAPI.onFocusInput(() => handleFocusInput())
+  window.futariAPI.onToggleTheme(() => toggle())
   window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
-    if (webviewActive.value) return
-    enterSubcommand(pluginId, icon)
+    handleAutoActivate(pluginId, icon)
   })
 })
 </script>
