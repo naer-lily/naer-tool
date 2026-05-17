@@ -10,7 +10,11 @@
     </div>
 
     <div class="mode-bar" v-if="searchMode === 'subcommand'">
-      <span v-html="activePluginIcon"></span> 子命令模式 · 退格清空返回
+      <span class="mode-icon">
+        <img v-if="isModeImg" :src="activePluginIcon || ''" class="mode-img">
+        <span v-else v-html="activePluginIcon"></span>
+      </span>
+      子命令模式 · 退格清空返回
     </div>
 
     <ResultList
@@ -25,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, nextTick } from 'vue'
+import { onMounted, computed, nextTick } from 'vue'
 import SearchInput from '@/components/SearchInput.vue'
 import ResultList from '@/components/ResultList.vue'
 import { useSearch } from '@/composables/useSearch'
@@ -34,6 +38,8 @@ import { useTheme } from '@/composables/useTheme'
 
 const { theme, toggle } = useTheme()
 const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand } = useSearch()
+
+const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.value || ''))
 
 function handleEscape(): void {
   if (searchMode.value === 'subcommand') {
@@ -123,6 +129,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.mode-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.mode-img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 .mode-bar :deep(svg) {
   width: 14px;

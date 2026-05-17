@@ -4,7 +4,10 @@
     @click="$emit('select', index)"
     @mouseenter="$emit('hover', index)"
   >
-    <span class="item-icon" v-html="item.icon || '&#x1F4E6;'"></span>
+    <span class="item-icon">
+      <img v-if="isImg" :src="iconSrc" class="icon-img">
+      <span v-else v-html="iconSrc"></span>
+    </span>
     <span class="item-preview">{{ item.preview }}</span>
     <span class="item-name">{{ item.name }}</span>
     <span class="item-shortcut">Alt+{{ item.shortcutIndex + 1 }}</span>
@@ -12,9 +15,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { SearchResult } from '@shared/plugin-api'
 
-defineProps<{
+const props = defineProps<{
   item: SearchResult
   active: boolean
   index: number
@@ -24,6 +28,9 @@ defineEmits<{
   select: [index: number]
   hover: [index: number]
 }>()
+
+const iconSrc = computed(() => props.item.icon || '&#x1F4E6;')
+const isImg = computed(() => /^(data:image|https?:)/.test(iconSrc.value))
 </script>
 
 <style scoped>
@@ -45,11 +52,15 @@ defineEmits<{
   flex-shrink: 0;
   width: 22px;
   height: 22px;
-  text-align: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+.item-icon .icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 .item-icon :deep(svg) {
   width: 18px;

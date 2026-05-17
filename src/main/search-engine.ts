@@ -1,13 +1,48 @@
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { formDialog } from '@main/form-dialog'
+import { readFileSync, existsSync } from 'fs'
+import { resolve as pathResolve, extname, isAbsolute } from 'path'
 import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
 
 const MAX_RESULTS = 9
 
+const MIME_MAP: Record<string, string> = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+  '.webp': 'image/webp'
+}
+
+function resolveIcon(icon: string | undefined): string | undefined {
+  if (!icon) return icon
+  if (/^(<|data:|https?:)/.test(icon)) return icon
+
+  const ext = extname(icon).toLowerCase()
+  if (ext && MIME_MAP[ext]) {
+    try {
+      const absPath = isAbsolute(icon) ? icon : pathResolve(icon)
+      if (existsSync(absPath)) {
+        const buf = readFileSync(absPath)
+        return `data:${MIME_MAP[ext]};base64,${buf.toString('base64')}`
+      }
+    } catch { /* file not readable, return as-is */ }
+  }
+
+  return icon
+}
+
 function normalizeResults(results: SearchResult[]): SearchResult[] {
   results.sort((a, b) => b.priority - a.priority)
-  return results.slice(0, MAX_RESULTS).map((r, i) => ({ ...r, shortcutIndex: i }))
+  return results.slice(0, MAX_RESULTS).map((r, i) => ({
+    ...r,
+    shortcutIndex: i,
+    icon: resolveIcon(r.icon)
+  }))
 }
 
 function collectFallbackResults(cmds: { id: string; name: string; icon?: string; description: string; matches(input: string): boolean; build(input: string): ICommand }[], pluginId: string, input: string): SearchResult[] {
@@ -41,7 +76,7 @@ class SearchEngine {
       return {
         mode: 'subcommand',
         pluginId: prefixMatch.pluginId,
-        pluginIcon: plugin?.icon,
+        pluginIcon: resolveIcon(plugin?.icon),
         results: await this.searchSubcommand(prefixMatch.pluginId, prefixMatch.subInput)
       }
     }

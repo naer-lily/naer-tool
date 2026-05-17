@@ -1,6 +1,9 @@
 <template>
   <div class="search-input" @click="focusInput">
-    <span v-if="prefixIcon" class="prefix-chip" v-html="prefixIcon"></span>
+    <span v-if="prefixIcon" class="prefix-chip">
+      <img v-if="isImg" :src="prefixIcon" class="chip-img">
+      <span v-else v-html="prefixIcon"></span>
+    </span>
     <input
       ref="inputEl"
       :value="modelValue"
@@ -13,15 +16,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: string
   placeholder?: string
   prefixIcon?: string | null
 }>(), {
   placeholder: '输入命令...'
 })
+
+const isImg = computed(() => /^(data:image|https?:)/.test(props.prefixIcon || ''))
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -66,6 +71,11 @@ onMounted(() => {
   background: var(--bg-hover);
   display: inline-flex;
   align-items: center;
+}
+.prefix-chip .chip-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 .prefix-chip :deep(svg) {
   width: 18px;
