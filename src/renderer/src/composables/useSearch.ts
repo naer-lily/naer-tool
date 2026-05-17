@@ -40,6 +40,8 @@ export function useSearch() {
 
   webViewReadyCleanup = window.futariAPI.onWebViewReady(() => {
     webviewLoading.value = false
+    const input = document.querySelector('.search-input input') as HTMLInputElement | null
+    input?.focus()
   })
 
   onBeforeUnmount(() => {
@@ -91,6 +93,8 @@ export function useSearch() {
   }
 
   function closeWebView(): void {
+    webviewActive.value = false
+    webviewLoading.value = false
     window.futariAPI.closeWebView()
     searchMode.value = 'main'
     activePluginId.value = null
@@ -98,6 +102,7 @@ export function useSearch() {
     query.value = ''
     results.value = []
     activeIndex.value = 0
+    doSearch()
   }
 
   async function selectResult(index: number): Promise<void> {

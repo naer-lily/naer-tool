@@ -9,6 +9,9 @@ const RESOURCES_DIR = app.isPackaged
   ? join(__dirname, '..', 'resources')
   : join(__dirname, '..', '..', 'resources')
 const BUILTIN_PRELOAD = join(RESOURCES_DIR, 'web-view-preload.js')
+const WIN_WIDTH = 680
+const CONTAINER_WIDTH = 648
+const CONTAINER_X = Math.round((WIN_WIDTH - CONTAINER_WIDTH) / 2)
 const SEARCH_HEIGHT = 58
 
 let tempPreloadPath: string | null = null
@@ -75,8 +78,7 @@ class WebViewManager {
 
     mainWin.contentView.addChildView(this.view)
 
-    const winWidth = mainWin.getBounds().width
-    this.view.setBounds({ x: 0, y: SEARCH_HEIGHT, width: winWidth, height: 1 })
+    this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height: 1 })
 
     if (config.html) {
       const b64 = Buffer.from(config.html, 'utf-8').toString('base64')
@@ -90,9 +92,13 @@ class WebViewManager {
       const height = config.height || 450
       this.setExpandedHeight(height)
       mainWin.webContents.send('web-view-ready')
+      mainWin.focus()
+      mainWin.webContents.focus()
     })
 
     mainWin.webContents.send('show-web-view', { height: config.height || 450 })
+    mainWin.focus()
+    mainWin.webContents.focus()
   }
 
   close(): void {
@@ -129,14 +135,13 @@ class WebViewManager {
     if (!mainWin) return
 
     const totalHeight = SEARCH_HEIGHT + height
-    const winWidth = mainWin.getBounds().width
 
     mainWin.setResizable(true)
-    mainWin.setSize(winWidth, totalHeight)
+    mainWin.setSize(WIN_WIDTH, totalHeight)
     mainWin.setResizable(false)
 
     if (this.view) {
-      this.view.setBounds({ x: 0, y: SEARCH_HEIGHT, width: winWidth, height })
+      this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height })
     }
   }
 
@@ -144,9 +149,8 @@ class WebViewManager {
     const mainWin = getMainWindow()
     if (!mainWin) return
 
-    const winWidth = mainWin.getBounds().width
     mainWin.setResizable(true)
-    mainWin.setSize(winWidth, 400)
+    mainWin.setSize(WIN_WIDTH, 400)
     mainWin.setResizable(false)
   }
 
