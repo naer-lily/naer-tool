@@ -15,6 +15,14 @@ const api = {
     ipcRenderer.send(IPC.CLOSE)
   },
 
+  closeWebView: (): void => {
+    ipcRenderer.send(IPC.CLOSE_WEB_VIEW)
+  },
+
+  webViewInput: (text: string): void => {
+    ipcRenderer.send(IPC.WEB_VIEW_INPUT, text)
+  },
+
   onFocusInput: (cb: () => void): (() => void) => {
     const handler = () => cb()
     ipcRenderer.on('focus-input', handler)
@@ -44,6 +52,30 @@ const api = {
     ipcRenderer.on('auto-activate', handler)
     return () => {
       ipcRenderer.removeListener('auto-activate', handler)
+    }
+  },
+
+  onShowWebView: (cb: (payload: { height: number }) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, payload: { height: number }) => cb(payload)
+    ipcRenderer.on(IPC.SHOW_WEB_VIEW, handler)
+    return () => {
+      ipcRenderer.removeListener(IPC.SHOW_WEB_VIEW, handler)
+    }
+  },
+
+  onHideWebView: (cb: () => void): (() => void) => {
+    const handler = () => cb()
+    ipcRenderer.on(IPC.HIDE_WEB_VIEW, handler)
+    return () => {
+      ipcRenderer.removeListener(IPC.HIDE_WEB_VIEW, handler)
+    }
+  },
+
+  onWebViewReady: (cb: () => void): (() => void) => {
+    const handler = () => cb()
+    ipcRenderer.on(IPC.WEB_VIEW_READY, handler)
+    return () => {
+      ipcRenderer.removeListener(IPC.WEB_VIEW_READY, handler)
     }
   }
 }

@@ -11,7 +11,13 @@ export function useSearch() {
   const activePluginId = ref<string | null>(null)
   const activePluginIcon = ref<string | null>(null)
 
+  const webviewActive = ref(false)
+  const webviewLoading = ref(false)
+
   let toastCleanup: (() => void) | null = null
+  let showWebViewCleanup: (() => void) | null = null
+  let hideWebViewCleanup: (() => void) | null = null
+  let webViewReadyCleanup: (() => void) | null = null
 
   toastCleanup = window.futariAPI.onToast((msg: string) => {
     toast.value = msg
@@ -20,8 +26,27 @@ export function useSearch() {
     }, 2000)
   })
 
+  showWebViewCleanup = window.futariAPI.onShowWebView(() => {
+    webviewActive.value = true
+    webviewLoading.value = true
+    results.value = []
+    activeIndex.value = 0
+  })
+
+  hideWebViewCleanup = window.futariAPI.onHideWebView(() => {
+    webviewActive.value = false
+    webviewLoading.value = false
+  })
+
+  webViewReadyCleanup = window.futariAPI.onWebViewReady(() => {
+    webviewLoading.value = false
+  })
+
   onBeforeUnmount(() => {
     toastCleanup?.()
+    showWebViewCleanup?.()
+    hideWebViewCleanup?.()
+    webViewReadyCleanup?.()
   })
 
   async function enterSubcommand(pluginId: string, icon?: string): Promise<void> {
@@ -34,6 +59,11 @@ export function useSearch() {
   }
 
   async function doSearch(): Promise<void> {
+    if (webviewActive.value) {
+      window.futariAPI.webViewInput(query.value)
+      return
+    }
+
     const text = query.value.trim()
 
     if (searchMode.value === 'subcommand') {
@@ -60,6 +90,16 @@ export function useSearch() {
     doSearch()
   }
 
+  function closeWebView(): void {
+    window.futariAPI.closeWebView()
+    searchMode.value = 'main'
+    activePluginId.value = null
+    activePluginIcon.value = null
+    query.value = ''
+    results.value = []
+    activeIndex.value = 0
+  }
+
   async function selectResult(index: number): Promise<void> {
     const item = results.value[index]
     if (!item) return
@@ -81,6 +121,7 @@ export function useSearch() {
   return {
     query, results, activeIndex, toast,
     searchMode, activePluginId, activePluginIcon,
-    doSearch, selectResult, exitSubcommand, enterSubcommand
+    webviewActive, webviewLoading,
+    doSearch, selectResult, exitSubcommand, enterSubcommand, closeWebView
   }
 }

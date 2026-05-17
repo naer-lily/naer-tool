@@ -4,7 +4,7 @@
       <SearchInput
         v-model="query"
         :prefix-icon="activePluginIcon"
-        @input="doSearch"
+        @input="onInput"
         @keydown="onKeydown"
       />
     </div>
@@ -17,7 +17,14 @@
       子命令模式 · 退格清空返回
     </div>
 
-    <ResultList
+    <div v-if="webviewActive" class="webview-placeholder">
+      <div v-if="webviewLoading" class="webview-loading">
+        <span class="loading-spinner"></span>
+        加载中...
+      </div>
+    </div>
+
+    <ResultList v-else
       :items="results"
       :active-index="activeIndex"
       @select="selectResult"
@@ -37,11 +44,15 @@ import { useKeyboardNav } from '@/composables/useKeyboardNav'
 import { useTheme } from '@/composables/useTheme'
 
 const { theme, toggle } = useTheme()
-const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand } = useSearch()
+const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand, webviewActive, webviewLoading, closeWebView } = useSearch()
 
 const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.value || ''))
 
 function handleEscape(): void {
+  if (webviewActive.value) {
+    closeWebView()
+    return
+  }
   if (searchMode.value === 'subcommand') {
     exitSubcommand()
   } else {
@@ -56,11 +67,22 @@ const { onKeydown: navKeydown } = useKeyboardNav({
   onEscape: handleEscape
 })
 
+function onInput(): void {
+  doSearch()
+}
+
 function onKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Backspace' && searchMode.value === 'subcommand' && !query.value) {
-    e.preventDefault()
-    exitSubcommand()
-    return
+  if (e.key === 'Backspace' && !query.value) {
+    if (webviewActive.value) {
+      e.preventDefault()
+      closeWebView()
+      return
+    }
+    if (searchMode.value === 'subcommand') {
+      e.preventDefault()
+      exitSubcommand()
+      return
+    }
   }
   navKeydown(e)
 }
@@ -68,6 +90,7 @@ function onKeydown(e: KeyboardEvent): void {
 onMounted(() => {
   doSearch()
   window.futariAPI.onFocusInput(() => {
+    if (webviewActive.value) closeWebView()
     exitSubcommand()
     query.value = ''
     nextTick(() => doSearch())
@@ -76,6 +99,7 @@ onMounted(() => {
     toggle()
   })
   window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
+    if (webviewActive.value) closeWebView()
     enterSubcommand(pluginId, icon)
   })
 })
@@ -142,6 +166,36 @@ onMounted(() => {
 .mode-bar :deep(svg) {
   width: 14px;
   height: 14px;
+}
+
+.webview-placeholder {
+  flex: 1;
+  background: transparent;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
+.webview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 0;
+  color: var(--text-hint);
+  font-size: 13px;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-divider);
+  border-top-color: var(--text-hint);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
 

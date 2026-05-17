@@ -5,4 +5,11 @@ export const IPC = {
   CLOSE: 'close-window',
   GET_THEME: 'get-theme',
   FORM_SUBMIT: 'form-submit',
+  SHOW_WEB_VIEW: 'show-web-view',
+  HIDE_WEB_VIEW: 'hide-web-view',
+  WEB_VIEW_INPUT: 'web-view-input',
+  WEB_VIEW_RESIZE: 'web-view-resize',
+  WEB_VIEW_MESSAGE: 'web-view-message',
+  CLOSE_WEB_VIEW: 'close-web-view',
+  WEB_VIEW_READY: 'web-view-ready',
 } as const

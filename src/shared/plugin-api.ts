@@ -1,3 +1,5 @@
+import type { WebViewConfig } from './web-view-api'
+
 export interface CommandMatch {
   preview: string
   priority?: number
@@ -24,6 +26,8 @@ export interface CommandContext {
   input: string
   toast(message: string): void
   showForm(config: FormConfig): Promise<Record<string, unknown> | null>
+  openWebView: (config: WebViewConfig) => void
+  closeWebView: () => void
 }
 
 export type CommandResult = void

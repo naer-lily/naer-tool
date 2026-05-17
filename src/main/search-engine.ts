@@ -1,6 +1,7 @@
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { formDialog } from '@main/form-dialog'
+import { webViewManager } from '@main/web-view-manager'
 import { readFileSync, existsSync } from 'fs'
 import { resolve as pathResolve, extname, isAbsolute } from 'path'
 import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
@@ -175,7 +176,9 @@ class SearchEngine {
     const ctx: CommandContext = {
       input,
       toast: showToast,
-      showForm: (config) => formDialog.show(config)
+      showForm: (config) => formDialog.show(config),
+      openWebView: (config) => webViewManager.open(config),
+      closeWebView: () => webViewManager.close()
     }
     const cmd = await this.resolveCommand(plugin, commandId, input)
     if (cmd) {
