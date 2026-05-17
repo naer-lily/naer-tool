@@ -91,6 +91,12 @@ class WebViewManager {
     this.view.webContents.on('dom-ready', () => {
       const height = config.height || 450
       this.setExpandedHeight(height)
+      this.view!.webContents.insertCSS(`
+        html, body {
+          border-radius: 0 0 12px 12px !important;
+          overflow: hidden !important;
+        }
+      `)
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
@@ -141,7 +147,7 @@ class WebViewManager {
     mainWin.setResizable(false)
 
     if (this.view) {
-      this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height: height - 12 })
+      this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height })
     }
   }
 

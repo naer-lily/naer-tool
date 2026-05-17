@@ -24,8 +24,6 @@
       </div>
     </div>
 
-    <div v-if="webviewActive && !webviewLoading" class="webview-bottom"></div>
-
     <ResultList v-else
       :items="results"
       :active-index="activeIndex"
@@ -167,24 +165,6 @@ onMounted(() => {
   background: transparent;
   -webkit-app-region: no-drag;
   user-select: none;
-}
-
-.webview-bottom {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 648px;
-  height: 12px;
-  background: var(--bg-primary);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-radius: 0 0 12px 12px;
-  border: 1px solid var(--border-primary);
-  border-top: none;
-  box-shadow: var(--shadow);
-  pointer-events: none;
-  z-index: 1;
 }
 
 .webview-loading {

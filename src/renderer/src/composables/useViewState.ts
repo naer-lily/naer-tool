@@ -4,13 +4,13 @@ import type { SearchResult } from '@shared/plugin-api'
 type ViewState =
   | { id: 'home' }
   | { id: 'subcommand'; pluginId: string; icon: string | null }
-  | { id: 'webview-loading'; height: number }
-  | { id: 'webview-active'; height: number }
+  | { id: 'webview-loading'; height: number; icon: string | null }
+  | { id: 'webview-active'; height: number; icon: string | null }
 
 type ViewEvent =
   | { type: 'enter-subcommand'; pluginId: string; icon?: string }
   | { type: 'exit-subcommand' }
-  | { type: 'open-webview'; height: number }
+  | { type: 'open-webview'; height: number; icon: string | null }
   | { type: 'webview-ready' }
   | { type: 'close-webview' }
   | { type: 'focus-input' }
@@ -45,9 +45,12 @@ function createViewState() {
     state.value.id === 'subcommand' ? state.value.pluginId : null
   )
 
-  const activePluginIcon = computed(() =>
-    state.value.id === 'subcommand' ? state.value.icon : null
-  )
+  const activePluginIcon = computed(() => {
+    const s = state.value
+    if (s.id === 'subcommand') return s.icon
+    if (s.id === 'webview-loading' || s.id === 'webview-active') return s.icon
+    return null
+  })
 
   function dispatch(event: ViewEvent): boolean {
     const s = state.value
@@ -63,12 +66,12 @@ function createViewState() {
         return true
 
       case 'open-webview':
-        state.value = { id: 'webview-loading', height: event.height }
+        state.value = { id: 'webview-loading', height: event.height, icon: event.icon }
         return true
 
       case 'webview-ready':
         if (s.id !== 'webview-loading') return false
-        state.value = { id: 'webview-active', height: s.height }
+        state.value = { id: 'webview-active', height: s.height, icon: s.icon }
         return true
 
       case 'close-webview':
@@ -205,7 +208,8 @@ function createViewState() {
   }
 
   function handleShowWebView(payload: { height: number }): void {
-    dispatch({ type: 'open-webview', height: payload.height })
+    const icon = state.value.id === 'subcommand' ? state.value.icon : null
+    dispatch({ type: 'open-webview', height: payload.height, icon })
     results.value = []
     activeIndex.value = 0
   }
