@@ -12,7 +12,7 @@ const BUILTIN_PRELOAD = join(RESOURCES_DIR, 'web-view-preload.js')
 const WIN_WIDTH = 680
 const CONTAINER_WIDTH = 648
 const CONTAINER_X = Math.round((WIN_WIDTH - CONTAINER_WIDTH) / 2)
-const SEARCH_HEIGHT = 58
+const SEARCH_HEIGHT = 64
 
 let tempPreloadPath: string | null = null
 

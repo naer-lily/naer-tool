@@ -13,6 +13,7 @@ export function useSearch() {
 
   const webviewActive = ref(false)
   const webviewLoading = ref(false)
+  const webviewHeight = ref(0)
 
   let toastCleanup: (() => void) | null = null
   let showWebViewCleanup: (() => void) | null = null
@@ -26,9 +27,10 @@ export function useSearch() {
     }, 2000)
   })
 
-  showWebViewCleanup = window.futariAPI.onShowWebView(() => {
+  showWebViewCleanup = window.futariAPI.onShowWebView((payload) => {
     webviewActive.value = true
     webviewLoading.value = true
+    webviewHeight.value = payload.height
     results.value = []
     activeIndex.value = 0
   })
@@ -95,6 +97,7 @@ export function useSearch() {
   function closeWebView(): void {
     webviewActive.value = false
     webviewLoading.value = false
+    webviewHeight.value = 0
     window.futariAPI.closeWebView()
     searchMode.value = 'main'
     activePluginId.value = null
@@ -129,7 +132,7 @@ export function useSearch() {
   return {
     query, results, activeIndex, toast,
     searchMode, activePluginId, activePluginIcon,
-    webviewActive, webviewLoading,
+    webviewActive, webviewLoading, webviewHeight,
     doSearch, selectResult, exitSubcommand, enterSubcommand, closeWebView
   }
 }

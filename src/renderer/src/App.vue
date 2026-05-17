@@ -9,7 +9,7 @@
       />
     </div>
 
-    <div class="mode-bar" v-if="searchMode === 'subcommand'">
+    <div class="mode-bar" v-if="!webviewActive && searchMode === 'subcommand'">
       <span class="mode-icon">
         <img v-if="isModeImg" :src="activePluginIcon || ''" class="mode-img">
         <span v-else v-html="activePluginIcon"></span>
@@ -17,12 +17,14 @@
       子命令模式 · 退格清空返回
     </div>
 
-    <div v-if="webviewActive" class="webview-placeholder">
+    <div v-if="webviewActive" class="webview-placeholder" :style="{ minHeight: Math.max(0, webviewHeight - 12) + 'px' }">
       <div v-if="webviewLoading" class="webview-loading">
         <span class="loading-spinner"></span>
         加载中...
       </div>
     </div>
+
+    <div v-if="webviewActive && !webviewLoading" class="webview-bottom"></div>
 
     <ResultList v-else
       :items="results"
@@ -44,7 +46,7 @@ import { useKeyboardNav } from '@/composables/useKeyboardNav'
 import { useTheme } from '@/composables/useTheme'
 
 const { theme, toggle } = useTheme()
-const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand, webviewActive, webviewLoading, closeWebView } = useSearch()
+const { query, results, activeIndex, toast, doSearch, selectResult, searchMode, activePluginIcon, exitSubcommand, enterSubcommand, webviewActive, webviewLoading, webviewHeight, closeWebView } = useSearch()
 
 const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.value || ''))
 
@@ -186,6 +188,20 @@ onMounted(() => {
   background: transparent;
   -webkit-app-region: no-drag;
   user-select: none;
+}
+
+.webview-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: var(--bg-primary);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 0 0 12px 12px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .webview-loading {
