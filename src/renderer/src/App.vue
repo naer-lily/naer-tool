@@ -50,7 +50,6 @@ const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.v
 
 function handleEscape(): void {
   if (webviewActive.value) {
-    console.log('[APP] ESC while webview active → closeWebView')
     closeWebView()
     return
   }
@@ -91,7 +90,7 @@ function onKeydown(e: KeyboardEvent): void {
 onMounted(() => {
   doSearch()
   window.futariAPI.onFocusInput(() => {
-    if (webviewActive.value) closeWebView()
+    if (webviewActive.value) return
     exitSubcommand()
     query.value = ''
     nextTick(() => doSearch())
@@ -100,7 +99,7 @@ onMounted(() => {
     toggle()
   })
   window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
-    if (webviewActive.value) closeWebView()
+    if (webviewActive.value) return
     enterSubcommand(pluginId, icon)
   })
 })

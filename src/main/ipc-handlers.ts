@@ -19,9 +19,7 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle(IPC.EXECUTE, async (_event, payload: { pluginId: string; commandId: string; input: string }) => {
-    console.log('[IPC] EXECUTE: plugin=%s cmd=%s input=%s', payload.pluginId, payload.commandId, payload.input)
     await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
-    console.log('[IPC] EXECUTE done, webView.isActive=%s', webViewManager.isActive)
     return { webViewOpened: webViewManager.isActive }
   })
 
@@ -43,8 +41,15 @@ export function registerIpc(): void {
   })
 
   ipcMain.on(IPC.CLOSE_WEB_VIEW, () => {
-    console.log('[IPC] CLOSE_WEB_VIEW received')
     webViewManager.close()
+  })
+
+  ipcMain.on(IPC.WEB_VIEW_RESIZE, (_event, height: number) => {
+    webViewManager.handleResize(height)
+  })
+
+  ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
+    webViewManager.handleMessage(data)
   })
 
   ipcMain.on(IPC.WEB_VIEW_RESIZE, (_event, height: number) => {
