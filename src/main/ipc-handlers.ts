@@ -43,6 +43,7 @@ export function registerIpc(): void {
   })
 
   ipcMain.on(IPC.CLOSE_WEB_VIEW, () => {
+    console.log('[IPC] CLOSE_WEB_VIEW received')
     webViewManager.close()
   })
 
@@ -51,6 +52,12 @@ export function registerIpc(): void {
   })
 
   ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
+    console.log('[IPC] WEB_VIEW_MESSAGE:', data)
     webViewManager.handleMessage(data)
+  })
+
+  ipcMain.on(IPC.WEB_VIEW_RESIZE, (_event, height: number) => {
+    console.log('[IPC] WEB_VIEW_RESIZE:', height)
+    webViewManager.handleResize(height)
   })
 }

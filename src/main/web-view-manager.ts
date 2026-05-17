@@ -114,9 +114,12 @@ class WebViewManager {
     const mainWin = getMainWindow()
     if (!mainWin) { console.log('[WV] close: no mainWin'); return }
 
+    console.log('[WV] close: called. view=%s', this.view ? 'exists' : 'null')
+    console.log('[WV] close: stack=\\n' + new Error().stack?.split('\n').slice(2, 6).join('\n'))
+
     if (this.view) {
       console.log('[WV] close: removing childView')
-      try { mainWin.contentView.removeChildView(this.view) } catch { /* ignore */ }
+      try { mainWin.contentView.removeChildView(this.view) } catch (e) { console.log('[WV] close: removeChildView error:', e) }
       this.view = null
     } else {
       console.log('[WV] close: no view to close')
