@@ -45,7 +45,7 @@ function handleEscape(): void {
   if (searchMode.value === 'subcommand') {
     exitSubcommand()
   } else {
-    window.naerAPI.closeWindow()
+    window.futariAPI.closeWindow()
   }
 }
 
@@ -67,15 +67,15 @@ function onKeydown(e: KeyboardEvent): void {
 
 onMounted(() => {
   doSearch()
-  window.naerAPI.onFocusInput(() => {
+  window.futariAPI.onFocusInput(() => {
     exitSubcommand()
     query.value = ''
     nextTick(() => doSearch())
   })
-  window.naerAPI.onToggleTheme(() => {
+  window.futariAPI.onToggleTheme(() => {
     toggle()
   })
-  window.naerAPI.onAutoActivate((pluginId: string, icon?: string) => {
+  window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
     enterSubcommand(pluginId, icon)
   })
 })

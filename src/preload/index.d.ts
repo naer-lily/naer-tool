@@ -1,6 +1,6 @@
 import type { SearchResponse } from '@shared/plugin-api'
 
-export interface NaerAPI {
+export interface FutariAPI {
   search(text: string, pluginId?: string): Promise<SearchResponse>
   execute(pluginId: string, commandId: string, input: string): Promise<void>
   closeWindow(): void
@@ -12,6 +12,6 @@ export interface NaerAPI {
 
 declare global {
   interface Window {
-    naerAPI: NaerAPI
+    futariAPI: FutariAPI
   }
 }

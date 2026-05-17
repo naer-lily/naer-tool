@@ -24,7 +24,7 @@ function createTrayIcon(): NativeImage {
 
 export function createTray(): void {
   tray = new Tray(createTrayIcon())
-  tray.setToolTip('NaerTool')
+  tray.setToolTip('Futari')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '显示/隐藏', click: toggleWindow },
     { label: '切换主题', click: () => { getMainWindow()?.webContents.send('toggle-theme') } },

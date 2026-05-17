@@ -1,7 +1,7 @@
 {
-  "name": "naer-tool",
+  "name": "futari",
   "version": "0.1.0",
-  "description": "NaerTool - Plugin-based command launcher",
+  "description": "Futari - Plugin-based command launcher",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

@@ -9,7 +9,7 @@ function generatePluginId(name: string): string {
 }
 
 function scaffoldJs(pluginName: string, pluginId: string, pluginIcon: string, prefix: string): string {
-  return `// NaerTool 插件: ${pluginName}
+  return `// Futari 插件: ${pluginName}
 // 用户插件必须是 .js 文件（require() 不能直接加载 TypeScript）
 // 同级目录下的 .d.ts 提供 IDE 类型提示
 
@@ -64,7 +64,7 @@ const plugin = {
     // }]
   },
 
-  // 自动激活：NaerTool 显示时匹配前台窗口自动进入子命令模式（可选）
+  // 自动激活：Futari 显示时匹配前台窗口自动进入子命令模式（可选）
   // shouldAutoActivate(appInfo) {
   //   return appInfo.name === 'notepad.exe'
   // },
@@ -75,16 +75,16 @@ module.exports = plugin
 }
 
 function scaffoldDts(): string {
-  return `// NaerTool 插件类型声明
+  return `// Futari 插件类型声明
 // 为同级 index.js 提供 IDE 智能提示（无需导入，仅用于类型检查）
 
-declare namespace NaerTool {
+declare namespace Futari {
   interface CommandMatch { preview: string; priority?: number }
 
   interface CommandContext {
     input: string
     toast(message: string): void
-    showForm(config: NaerTool.FormConfig): Promise<Record<string, unknown> | null>
+    showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
   }
 
   interface FormField {
@@ -101,7 +101,7 @@ declare namespace NaerTool {
   interface FormConfig {
     title: string
     width?: number
-    fields: NaerTool.FormField[]
+    fields: Futari.FormField[]
   }
 
   interface ICommand {
@@ -128,7 +128,7 @@ declare namespace NaerTool {
   }
 }
 
-declare const plugin: NaerTool.IPlugin
+declare const plugin: Futari.IPlugin
 export default plugin
 `
 }

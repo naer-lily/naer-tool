@@ -1,6 +1,6 @@
 import { ref, watchEffect } from 'vue'
 
-const THEME_KEY = 'naer-theme'
+const THEME_KEY = 'futari-theme'
 type Theme = 'light' | 'dark'
 
 const theme = ref<Theme>((localStorage.getItem(THEME_KEY) as Theme) || 'dark')

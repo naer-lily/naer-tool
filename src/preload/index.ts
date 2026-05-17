@@ -48,6 +48,6 @@ const api = {
   }
 }
 
-contextBridge.exposeInMainWorld('naerAPI', api)
+contextBridge.exposeInMainWorld('futariAPI', api)
 
-export type NaerAPI = typeof api
+export type FutariAPI = typeof api

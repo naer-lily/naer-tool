@@ -1,4 +1,4 @@
-# NaerTool
+# Futari
 
 Plugin-based command launcher for Windows. Type less, do more.
 

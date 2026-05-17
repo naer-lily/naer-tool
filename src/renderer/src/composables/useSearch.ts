@@ -13,7 +13,7 @@ export function useSearch() {
 
   let toastCleanup: (() => void) | null = null
 
-  toastCleanup = window.naerAPI.onToast((msg: string) => {
+  toastCleanup = window.futariAPI.onToast((msg: string) => {
     toast.value = msg
     setTimeout(() => {
       toast.value = ''
@@ -29,7 +29,7 @@ export function useSearch() {
     activePluginId.value = pluginId
     activePluginIcon.value = icon || null
     query.value = ''
-    results.value = (await window.naerAPI.search('', pluginId)).results
+    results.value = (await window.futariAPI.search('', pluginId)).results
     activeIndex.value = 0
   }
 
@@ -37,12 +37,12 @@ export function useSearch() {
     const text = query.value.trim()
 
     if (searchMode.value === 'subcommand') {
-      results.value = (await window.naerAPI.search(text, activePluginId.value!)).results
+      results.value = (await window.futariAPI.search(text, activePluginId.value!)).results
       activeIndex.value = 0
       return
     }
 
-    const response = await window.naerAPI.search(text)
+    const response = await window.futariAPI.search(text)
 
     if (response.mode === 'subcommand') {
       await enterSubcommand(response.pluginId!, response.pluginIcon)
@@ -69,7 +69,7 @@ export function useSearch() {
       return
     }
 
-    await window.naerAPI.execute(item.pluginId, item.id, query.value)
+    await window.futariAPI.execute(item.pluginId, item.id, query.value)
     query.value = ''
     results.value = []
     activeIndex.value = 0
