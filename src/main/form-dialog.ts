@@ -8,16 +8,16 @@ function buildFormHtml(config: FormConfig): string {
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:transparent;overflow:hidden;user-select:none;cursor:default}
-input,select,textarea{cursor:text}
-input[type=checkbox],input[type=radio],button,label,.switch,.chip label{cursor:pointer}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:#202020;overflow:hidden;user-select:none;cursor:default}
+input,select,textarea{cursor:text;-webkit-app-region:no-drag}
+input[type=checkbox],input[type=radio],button,label,.switch,.chip label{cursor:pointer;-webkit-app-region:no-drag}
 .win{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
-.title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0}
+.title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0;-webkit-app-region:drag}
 .title-bar span{font-size:12px;font-weight:600;color:var(--t1)}
-.title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center}
+.title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center;-webkit-app-region:no-drag}
 .title-bar button:hover{background:var(--hv);color:var(--t1)}
-.body{flex:1;padding:8px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
-.footer{display:flex;justify-content:flex-end;gap:8px;padding:8px 16px;border-top:1px solid var(--dv);flex-shrink:0}
+.body{flex:1;padding:8px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;-webkit-app-region:no-drag}
+.footer{display:flex;justify-content:flex-end;gap:8px;padding:8px 16px;border-top:1px solid var(--dv);flex-shrink:0;-webkit-app-region:no-drag}
 .footer button{padding:6px 20px;border-radius:6px;font-size:13px;cursor:pointer;border:none;font-family:inherit}
 .btn-ok{background:#1677ff;color:#fff}
 .btn-ok:hover{background:#4096ff}

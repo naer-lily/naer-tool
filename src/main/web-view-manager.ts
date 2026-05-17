@@ -68,7 +68,7 @@ class WebViewManager {
     const mainWin = getMainWindow()
     if (!mainWin) return
 
-    this.close()
+    if (this.view) this.close()
 
     this.view = getWebView(config)
     this.view.setBackgroundColor('#00000000')

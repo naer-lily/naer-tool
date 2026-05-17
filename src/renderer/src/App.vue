@@ -1,5 +1,5 @@
 <template>
-  <div class="search-container">
+  <div class="search-container" :class="{ 'webview-mode': webviewActive }">
     <div class="header">
       <SearchInput
         v-model="query"
@@ -120,6 +120,19 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+.search-container.webview-mode {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.search-container.webview-mode .header {
+  background: var(--bg-primary);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .header {

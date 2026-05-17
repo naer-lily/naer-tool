@@ -110,6 +110,9 @@ export function useSearch() {
     }
 
     await window.futariAPI.execute(item.pluginId, item.id, query.value)
+
+    if (webviewActive.value) return
+
     query.value = ''
     results.value = []
     activeIndex.value = 0
