@@ -26,7 +26,8 @@ export function useSearch() {
     }, 2000)
   })
 
-  showWebViewCleanup = window.futariAPI.onShowWebView(() => {
+  showWebViewCleanup = window.futariAPI.onShowWebView((payload) => {
+    console.log('[REN] onShowWebView height=%d', payload.height)
     webviewActive.value = true
     webviewLoading.value = true
     results.value = []
@@ -34,11 +35,13 @@ export function useSearch() {
   })
 
   hideWebViewCleanup = window.futariAPI.onHideWebView(() => {
+    console.log('[REN] onHideWebView')
     webviewActive.value = false
     webviewLoading.value = false
   })
 
   webViewReadyCleanup = window.futariAPI.onWebViewReady(() => {
+    console.log('[REN] onWebViewReady')
     webviewLoading.value = false
   })
 
@@ -91,6 +94,7 @@ export function useSearch() {
   }
 
   function closeWebView(): void {
+    console.log('[REN] closeWebView called')
     window.futariAPI.closeWebView()
     searchMode.value = 'main'
     activePluginId.value = null
@@ -109,7 +113,9 @@ export function useSearch() {
       return
     }
 
+    console.log('[REN] selectResult: executing %s/%s', item.pluginId, item.id)
     const result = await window.futariAPI.execute(item.pluginId, item.id, query.value)
+    console.log('[REN] selectResult: execute returned webViewOpened=%s', result.webViewOpened)
 
     if (result.webViewOpened) return
 

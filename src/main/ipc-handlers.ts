@@ -19,7 +19,9 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle(IPC.EXECUTE, async (_event, payload: { pluginId: string; commandId: string; input: string }) => {
+    console.log('[IPC] EXECUTE: plugin=%s cmd=%s input=%s', payload.pluginId, payload.commandId, payload.input)
     await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+    console.log('[IPC] EXECUTE done, webView.isActive=%s', webViewManager.isActive)
     return { webViewOpened: webViewManager.isActive }
   })
 
@@ -29,11 +31,6 @@ export function registerIpc(): void {
 
   ipcMain.on(IPC.FORM_SUBMIT, (event, values: Record<string, unknown>) => {
     formDialog.handleSubmit(event.sender.id, values)
-  })
-
-  ipcMain.on('move-form-window', (event, pos: { x: number; y: number }) => {
-    const win = formDialog.getWindow(event.sender.id)
-    if (win) win.setBounds({ x: Math.round(pos.x), y: Math.round(pos.y), width: win.getBounds().width, height: win.getBounds().height })
   })
 
   ipcMain.handle(IPC.GET_THEME, () => {

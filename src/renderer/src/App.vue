@@ -50,6 +50,7 @@ const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.v
 
 function handleEscape(): void {
   if (webviewActive.value) {
+    console.log('[APP] ESC while webview active → closeWebView')
     closeWebView()
     return
   }
