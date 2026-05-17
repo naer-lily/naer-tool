@@ -17,7 +17,12 @@
       子命令模式 · 退格清空返回
     </div>
 
-    <div v-if="webviewActive" class="webview-placeholder" :style="{ minHeight: Math.max(0, webviewHeight - 12) + 'px' }">
+    <div v-if="webviewActive" class="webview-placeholder" :style="{ minHeight: webviewHeight + 'px' }">
+      <div v-if="webviewLoading" class="webview-loading">
+        <span class="loading-spinner"></span>
+        加载中...
+      </div>
+    </div>
       <div v-if="webviewLoading" class="webview-loading">
         <span class="loading-spinner"></span>
         加载中...
@@ -191,15 +196,19 @@ onMounted(() => {
 }
 
 .webview-bottom {
-  position: absolute;
+  position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 648px;
   height: 12px;
   background: var(--bg-primary);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 0 0 12px 12px;
+  border: 1px solid var(--border-primary);
+  border-top: none;
+  box-shadow: var(--shadow);
   pointer-events: none;
   z-index: 1;
 }

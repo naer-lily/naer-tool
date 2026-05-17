@@ -141,7 +141,7 @@ class WebViewManager {
     mainWin.setResizable(false)
 
     if (this.view) {
-      this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height })
+      this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height: height - 12 })
     }
   }
 
