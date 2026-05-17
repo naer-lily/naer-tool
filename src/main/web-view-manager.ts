@@ -79,7 +79,8 @@ class WebViewManager {
     this.view.setBounds({ x: 0, y: SEARCH_HEIGHT, width: winWidth, height: 1 })
 
     if (config.html) {
-      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(config.html)}`
+      const b64 = Buffer.from(config.html, 'utf-8').toString('base64')
+      const dataUrl = `data:text/html;charset=utf-8;base64,${b64}`
       this.view.webContents.loadURL(dataUrl)
     } else if (config.url) {
       this.view.webContents.loadURL(config.url)
@@ -147,6 +148,10 @@ class WebViewManager {
     mainWin.setResizable(true)
     mainWin.setSize(winWidth, 400)
     mainWin.setResizable(false)
+  }
+
+  get isActive(): boolean {
+    return this.view !== null
   }
 }
 

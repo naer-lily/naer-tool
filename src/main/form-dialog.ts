@@ -9,22 +9,20 @@ function buildFormHtml(config: FormConfig): string {
 <html><head><meta charset="utf-8"><style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:#202020;overflow:hidden;user-select:none;cursor:default}
-input,select,textarea{cursor:text;-webkit-app-region:no-drag}
-input[type=checkbox],input[type=radio],button,label,.switch,.chip label{cursor:pointer;-webkit-app-region:no-drag}
 .win{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bd);border-radius:10px;overflow:hidden}
-.title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0;-webkit-app-region:drag}
-.title-bar span{font-size:12px;font-weight:600;color:var(--t1)}
-.title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center;-webkit-app-region:no-drag}
+.title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0;cursor:default}
+.title-bar span{font-size:12px;font-weight:600;color:var(--t1);cursor:default}
+.title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center}
 .title-bar button:hover{background:var(--hv);color:var(--t1)}
-.body{flex:1;padding:8px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;-webkit-app-region:no-drag}
-.footer{display:flex;justify-content:flex-end;gap:8px;padding:8px 16px;border-top:1px solid var(--dv);flex-shrink:0;-webkit-app-region:no-drag}
+.body{flex:1;padding:8px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.footer{display:flex;justify-content:flex-end;gap:8px;padding:8px 16px;border-top:1px solid var(--dv);flex-shrink:0}
 .footer button{padding:6px 20px;border-radius:6px;font-size:13px;cursor:pointer;border:none;font-family:inherit}
 .btn-ok{background:#1677ff;color:#fff}
 .btn-ok:hover{background:#4096ff}
 .btn-cancel{background:var(--hv);color:var(--t1)}
 .btn-cancel:hover{background:var(--bd)}
 .field{display:flex;flex-direction:column;gap:3px}
-.field label{font-size:11px;color:var(--t2)}
+.field label{font-size:11px;color:var(--t2);cursor:default}
 .field input,.field select,.field textarea{width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--ib);color:var(--t1);font-size:13px;font-family:inherit;outline:none}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:#1677ff}
 .field input:disabled,.field select:disabled,.field textarea:disabled{opacity:.5}
@@ -47,7 +45,7 @@ input[type=checkbox],input[type=radio],button,label,.switch,.chip label{cursor:p
 </style></head>
 <body style="--bg:#202020;--t1:#e8e8e8;--t2:#999;--bd:rgba(255,255,255,0.08);--dv:rgba(255,255,255,0.06);--hv:rgba(255,255,255,0.06);--ib:rgba(255,255,255,0.05)">
 <div class="win">
-<div class="title-bar"><span>${escapeHtml(config.title)}</span><button onclick="window.close()">✕</button></div>
+<div class="title-bar" id="titleBar"><span>${escapeHtml(config.title)}</span><button onclick="window.close()">✕</button></div>
 <div class="body">${fieldsHtml}</div>
 <div class="footer">
 <button class="btn-cancel" onclick="window.close()">取消</button>
@@ -62,6 +60,21 @@ ${config.fields.map(f => getterJs(f)).join('\n')}
   ipcRenderer.send('form-submit',vals)
   window.close()
 }
+var titleBar = document.getElementById('titleBar')
+var dragging = false
+var offX = 0
+var offY = 0
+titleBar.addEventListener('mousedown', function(e) {
+  if (e.target.closest('button')) return
+  dragging = true
+  offX = e.screenX - (window.screenLeft || 0)
+  offY = e.screenY - (window.screenTop || 0)
+})
+document.addEventListener('mousemove', function(e) {
+  if (!dragging) return
+  ipcRenderer.send('move-form-window', { x: e.screenX - offX, y: e.screenY - offY })
+})
+document.addEventListener('mouseup', function() { dragging = false })
 </script>
 </body></html>`
 }

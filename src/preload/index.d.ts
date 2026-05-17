@@ -2,7 +2,7 @@ import type { SearchResponse } from '@shared/plugin-api'
 
 export interface FutariAPI {
   search(text: string, pluginId?: string): Promise<SearchResponse>
-  execute(pluginId: string, commandId: string, input: string): Promise<void>
+  execute(pluginId: string, commandId: string, input: string): Promise<{ webViewOpened: boolean }>
   closeWindow(): void
   closeWebView(): void
   webViewInput(text: string): void

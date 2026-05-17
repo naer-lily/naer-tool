@@ -7,7 +7,7 @@ const api = {
     return ipcRenderer.invoke(IPC.SEARCH, { text, pluginId })
   },
 
-  execute: (pluginId: string, commandId: string, input: string): Promise<void> => {
+  execute: (pluginId: string, commandId: string, input: string): Promise<{ webViewOpened: boolean }> => {
     return ipcRenderer.invoke(IPC.EXECUTE, { pluginId, commandId, input })
   },
 

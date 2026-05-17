@@ -109,9 +109,9 @@ export function useSearch() {
       return
     }
 
-    await window.futariAPI.execute(item.pluginId, item.id, query.value)
+    const result = await window.futariAPI.execute(item.pluginId, item.id, query.value)
 
-    if (webviewActive.value) return
+    if (result.webViewOpened) return
 
     query.value = ''
     results.value = []
