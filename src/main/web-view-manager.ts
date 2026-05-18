@@ -1,4 +1,4 @@
-import { WebContentsView, app } from 'electron'
+import { WebContentsView } from 'electron'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -6,9 +6,7 @@ import { windowStateMachine } from '@main/window-state-machine'
 import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
-const RESOURCES_DIR = app.isPackaged
-  ? join(__dirname, '..', 'resources')
-  : join(__dirname, '..', '..', 'resources')
+const RESOURCES_DIR = join(__dirname, '..', '..', 'resources')
 const BUILTIN_PRELOAD = join(RESOURCES_DIR, 'web-view-preload.js')
 const WIN_WIDTH = 680
 const CONTAINER_WIDTH = 648
