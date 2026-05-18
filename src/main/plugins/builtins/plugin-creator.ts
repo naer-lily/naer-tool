@@ -18,7 +18,10 @@ function generatePluginId(name: string): string {
 }
 
 function scaffoldJs(pluginName: string, pluginId: string, pluginIcon: string, prefix: string): string {
-  return `// Futari Plugin: ${pluginName}
+  return `/**
+ * Futari Plugin: ${pluginName}
+ * @type {import('futari-plugin-types').default}
+ */
 
 const plugin = {
   id: '${pluginId}',
@@ -42,79 +45,23 @@ module.exports = plugin
 `
 }
 
-function scaffoldDts(): string {
-  return `// Futari Plugin type declarations
-// Provides IDE intellisense for sibling index.js
+function scaffoldDts(pluginName: string): string {
+  return `/**
+ * Futari Plugin: ${pluginName}
+ *
+ * TypeScript 类型声明
+ * 完整的 API 类型定义来自 futari-plugin-types 包
+ *
+ * 使用方式:
+ *   1. 在本目录运行 \`npm install\` (安装 devDependencies)
+ *   2. IDE 自动获得 Futari API 的类型提示
+ *   3. 无需手动 import — 所有类型通过 namespace Futari 全局可用
+ */
 
-declare namespace Futari {
-  interface CommandMatch { preview: string; priority?: number }
-
-  interface CommandContext {
-    input: string
-    toast(message: string): void
-    showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
-    openWebView(config: Futari.WebViewConfig): Promise<unknown>
-    closeWebView(): void
-    clipboard: {
-      writeText(text: string): void
-      readText(): string
-      writeHTML(html: string): void
-      readHTML(): string
-      clear(): void
-    }
-    shell: {
-      openExternal(url: string): Promise<void>
-      openPath(path: string): Promise<string>
-      showItemInFolder(path: string): void
-      beep(): void
-    }
-  }
-
-  interface WebViewConfig {
-    html?: string
-    htmlPath?: string
-    url?: string
-    preload?: string
-    height?: number
-    injectBaseStyles?: boolean
-    pluginIcon?: string
-  }
-
-  interface FormField {
-    type: 'input' | 'number' | 'select' | 'checkbox' | 'radio' | 'switch' | 'textarea' | 'file'
-    key: string; label: string; defaultValue?: unknown; placeholder?: string
-    required?: boolean; disabled?: boolean; options?: { label: string; value: string }[]
-  }
-
-  interface FormConfig { title: string; width?: number; fields: Futari.FormField[] }
-
-  type CommandOutcome = 'close' | 'home'
-
-  interface ICommand {
-    id: string; name: string; icon?: string
-    match(input: string): CommandMatch | null
-    execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
-  }
-
-  interface IFallbackCommand {
-    id: string; name: string; description: string; icon?: string
-    matches(input: string): boolean; build(input: string): ICommand
-  }
-
-  interface AppInfo { name: string; path: string; pid: number }
-
-  interface IPlugin {
-    id: string; name: string; icon: string; prefix?: string
-    onActivate(ctx: object): Promise<void>
-    onDeactivate(): Promise<void>
-    buildCommands(ctx: object): Promise<ICommand[]>
-    getFallbackCommands?(ctx: object): Promise<IFallbackCommand[]>
-    shouldAutoActivate?(appInfo: AppInfo): boolean
-  }
-}
+/// <reference types="futari-plugin-types" />
 
 declare const plugin: Futari.IPlugin
-export default plugin
+export = plugin
 `
 }
 
@@ -171,7 +118,7 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
     }
     mkdirSync(pluginDir)
     writeFileSync(join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
-    writeFileSync(join(pluginDir, 'index.d.ts'), scaffoldDts(), 'utf-8')
+    writeFileSync(join(pluginDir, 'index.d.ts'), scaffoldDts(pluginName), 'utf-8')
     writeFileSync(join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId, join(app.getAppPath(), 'types')), 'utf-8')
 
     try {
