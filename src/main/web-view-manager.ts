@@ -75,6 +75,7 @@ class WebViewManager {
 
     this.view = getWebView(config)
     this.view.setBackgroundColor('#00000000')
+    this.view.setBorderRadius(12)
 
     mainWin.contentView.addChildView(this.view)
 
@@ -91,26 +92,6 @@ class WebViewManager {
     this.view.webContents.on('dom-ready', () => {
       const height = config.height || 450
       this.setExpandedHeight(height)
-      try {
-        this.view!.webContents.insertCSS(`
-          html {
-            background: transparent !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-          }
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-            min-height: 100% !important;
-            border-radius: 0 0 12px 12px !important;
-            overflow: hidden !important;
-          }
-        `)
-      } catch (e) {
-        console.error('[WebView] insertCSS failed:', e)
-      }
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
