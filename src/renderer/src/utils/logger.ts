@@ -5,11 +5,14 @@ function ts(): string {
 }
 
 function log(level: string, ...args: unknown[]): void {
+  const userFmt = String(args[0])
+  const userRest = args.slice(1)
+
   if (typeof window !== 'undefined' && window.futariAPI?.log) {
-    window.futariAPI.log(level, ts(), ...args)
+    window.futariAPI.log(level, `[renderer] ${ts()} ${userFmt}`, ...userRest)
   }
   const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log
-  fn(PREFIX, ts(), ...args)
+  fn(`${PREFIX} ${ts()} ${userFmt}`, ...userRest)
 }
 
 export const logger = {

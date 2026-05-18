@@ -55,11 +55,11 @@ export function createWindow(): void {
       logger.trace('[WM] blur suppressed: within %dms of resize', sinceResize)
       return
     }
-    hideWindow()
+    hideWindow('blur')
   })
 
   mainWindow.on('ready-to-show', () => {
-    hideWindow()
+    hideWindow('ready-to-show')
   })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -103,9 +103,9 @@ export function showWindow(): void {
   })
 }
 
-export function hideWindow(): void {
+export function hideWindow(source?: string): void {
   if (!mainWindow) return
-  logger.trace('[WM] hideWindow called, stack=%s', new Error().stack?.split('\n')[2]?.trim())
+  logger.trace('[WM] hideWindow called source=%s', source || '?')
   isActive = false
   mainWindow.setOpacity(0)
   mainWindow.setIgnoreMouseEvents(true, { forward: true })
@@ -115,7 +115,7 @@ export function hideWindow(): void {
 export function toggleWindow(): void {
   if (!mainWindow) return
   if (isActive) {
-    hideWindow()
+    hideWindow('toggle')
   } else {
     showWindow()
   }
