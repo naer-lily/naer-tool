@@ -12,6 +12,11 @@ const OFFSCREEN_Y = -9999
 
 let mainWindow: BrowserWindow | null = null
 let isActive = false
+let suppressBlurHide = false
+
+export function setSuppressBlurHide(value: boolean): void {
+  suppressBlurHide = value
+}
 
 export function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -35,6 +40,7 @@ export function createWindow(): void {
   centerAtTop()
 
   mainWindow.on('blur', () => {
+    if (suppressBlurHide) return
     hideWindow()
   })
 
