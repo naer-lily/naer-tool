@@ -40,6 +40,14 @@ const plugin = {
     //     ctx.toast(\`你输入了: \${ctx.input}\`)
     //   }
     // }]
+    //
+    // WebView 分文件开发示例:
+    // const path = require('path')
+    // ctx.openWebView({
+    //   htmlPath: path.join(__dirname, 'page.html'),  // <script src="./lib.js"> 可用
+    //   preload: path.join(__dirname, 'preload.js'),  // require('./lib.js') 可用
+    //   height: 400
+    // })
   },
 
   // 全局命令（主模式匹配）：不需要前缀
@@ -85,6 +93,16 @@ declare namespace Futari {
     input: string
     toast(message: string): void
     showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
+    openWebView(config: Futari.WebViewConfig): void
+    closeWebView(): void
+  }
+
+  interface WebViewConfig {
+    html?: string
+    htmlPath?: string
+    url?: string
+    preload?: string
+    height?: number
   }
 
   interface FormField {
@@ -133,6 +151,17 @@ export default plugin
 `
 }
 
+function scaffoldPackageJson(pluginName: string, pluginId: string): string {
+  return JSON.stringify({
+    name: pluginId,
+    version: '0.1.0',
+    description: pluginName,
+    main: './index.js',
+    types: './index.d.ts',
+    dependencies: {}
+  }, null, 2) + '\n'
+}
+
 async function createPluginViaForm(ctx: CommandContext): Promise<void> {
   const result = await ctx.showForm({
     title: '创建新插件',
@@ -175,6 +204,7 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
     fsp.mkdirSync(pluginDir)
     fsp.writeFileSync(pth.join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
     fsp.writeFileSync(pth.join(pluginDir, 'index.d.ts'), scaffoldDts(), 'utf-8')
+    fsp.writeFileSync(pth.join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId), 'utf-8')
     ctx.toast(`插件已创建: ${pluginDir}`)
   } catch (e) {
     ctx.toast(`创建失败: ${String(e).slice(0, 80)}`)
@@ -197,7 +227,7 @@ const pluginCreator: IPlugin = {
     return [{
       id: 'create-plugin',
       name: '创建新插件',
-      description: '填写表单，创建插件骨架 (index.js + index.d.ts)',
+      description: '填写表单，创建插件骨架 (index.js + index.d.ts + package.json)',
       icon: '\u{1F4C1}',
       matches(input: string): boolean {
         if (!input) return true

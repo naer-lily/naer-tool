@@ -26,7 +26,7 @@ function buildPreload(config: WebViewConfig): string {
     if (!existsSync(config.preload)) {
       throw new Error(`Preload not found: ${config.preload}`)
     }
-    code += '\n' + readFileSync(config.preload, 'utf-8')
+    code += `\nrequire('${config.preload.replace(/\\/g, '/')}');\n`
   }
   return code
 }
@@ -85,6 +85,9 @@ class WebViewManager {
       const b64 = Buffer.from(config.html, 'utf-8').toString('base64')
       const dataUrl = `data:text/html;charset=utf-8;base64,${b64}`
       this.view.webContents.loadURL(dataUrl)
+    } else if (config.htmlPath) {
+      const fileUrl = `file:///${config.htmlPath.replace(/\\/g, '/')}`
+      this.view.webContents.loadURL(fileUrl)
     } else if (config.url) {
       this.view.webContents.loadURL(config.url)
     }
