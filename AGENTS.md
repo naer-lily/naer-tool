@@ -257,14 +257,12 @@ interface WebViewConfig {
 
 ### Loading
 - Built-in plugins live in `src/main/plugins/builtins/`, imported at startup via `registerBuiltin()`
-- User plugins are `.js` CommonJS modules loaded via `require()` from paths listed in `~/.futari/config.json`
-- Config file `~/.futari/config.json` stores: `shortcut`, `theme`, `plugins` (array of paths)
-- `configManager.getPlugins()` reads paths; `pluginHost.loadFromPath(path)` requires and registers
-- Plugin-creator (`Create Plugin`) scaffolds new user plugins and auto-adds to config + loads immediately
-- Reload command re-reads config and re-`require()`s all user plugins from stored paths
-- `pluginHost.loadFromPath(path)`: resolves path, `delete require.cache`, requires module, calls `onActivate`, registers in map. Conflicts: unloads existing plugin with same ID first.
-
-### Interface (defined in `src/shared/plugin-api.ts`)
+- User plugins live under `~/.futari/plugins/<plugin-name>/` — each directory must contain a `package.json` with `"main"` pointing to the entry `.js`
+- At startup and on reload, `pluginHost.scanAndLoadUserPlugins()` scans `~/.futari/plugins/` for subdirectories with `package.json`, `require()`s them, and registers in the plugin map
+- Config file `~/.futari/config.json` stores only: `shortcut`, `theme` (no plugin paths)
+- Plugin-creator (`Create Plugin`) scaffolds new user plugins directly into `~/.futari/plugins/<name>/` — no folder selection or config editing needed
+- Reload command calls `scanAndLoadUserPlugins()` which unloads all user plugins (with try-catch per plugin) then rescans and reloads
+- `pluginHost.loadFromPath(dir)`: resolves via `package.json.main`, `delete require.cache`, `require()`s the module, calls `onActivate`, registers in map. Conflicts: unloads existing plugin with same ID first.
 - `IPlugin.prefix` — registers in PrefixRegistry; user types `prefix ` to enter subcommand mode
 - `IPlugin.buildCommands()` — called ONCE when entering subcommand mode, returns all `ICommand[]`
 - `ICommand.match(input: string): CommandMatch | null` — called on EVERY keystroke; returns null if no match
@@ -275,6 +273,7 @@ interface WebViewConfig {
 - `CommandContext.shell` — `openExternal/openPath/showItemInFolder/beep` wrappers over `electron.shell`
 
 ### Reload
+- `scanAndLoadUserPlugins()` unloads all user plugins (each with `try-catch`) then rescans `~/.futari/plugins/`
 - `delete require.cache[pluginPath]` → re-`require()` → `onDeactivate()` old → `onActivate()` new
 - PrefixRegistry is rebuilt on reload
 
@@ -398,8 +397,14 @@ showWindow(): centerAtTop() → setOpacity(0) → setIgnoreMouseEvents(false) �
 - `npm run build` — production build
 - `npm run lint` — vue-tsc type-check (main + web configs)
 - Log file: `tail -f ~/.futari/logs/main.log`
+- `npm run package` — build + electron-builder portable exe → `dist/Futari-*-portable.exe`
 
-## Phase-Based Development
-- Work stops after each phase for manual testing — do NOT proceed to next phase unprompted
-- See TODO list for phase breakdown
-- After changes: run `npm run lint` (when available), verify TypeScript compiles
+## Build Config (`package.json` → `"build"`)
+- `icon`: `resources/icon.png` — electron-builder 会自动生成各平台格式 (Windows .ico 等)
+- After changing `package.json` (version, build config), run `npm run lint` to verify
+
+## Version & Release Rules
+- **Only bump version when explicitly asked by the user**
+- When bumping: update `package.json` version, `git commit`, `git tag vX.Y.Z`, `git push --tags`
+- CI (`.github/workflows/release.yml`) triggers on `v*` tag push → builds portable exe → creates GitHub Release
+- Requires `setup-python@v5` with `python-version: '3.11'` for `node-gyp` native module rebuild

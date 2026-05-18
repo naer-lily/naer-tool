@@ -65,7 +65,11 @@ class PluginHost {
     // unload existing user plugins
     for (const [id, p] of this.pluginPaths) {
       if (!p.startsWith('builtin:')) {
-        await this.unload(id)
+        try {
+          await this.unload(id)
+        } catch (e) {
+          logger.error('[PluginHost] unload failed for %s:', id, e)
+        }
       }
     }
 
