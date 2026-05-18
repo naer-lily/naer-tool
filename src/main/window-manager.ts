@@ -59,6 +59,10 @@ export function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    if (isActive) {
+      logger.trace('[WM] ready-to-show ignored: window is active')
+      return
+    }
     hideWindow('ready-to-show')
   })
 
