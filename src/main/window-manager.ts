@@ -7,6 +7,8 @@ import type { AppInfo } from '@shared/plugin-api'
 
 const WIN_WIDTH = 680
 const WIN_HEIGHT = 400
+const OFFSCREEN_X = -9999
+const OFFSCREEN_Y = -9999
 
 let mainWindow: BrowserWindow | null = null
 let isActive = false
@@ -68,8 +70,8 @@ export function showWindow(): void {
   }
 
   mainWindow.setOpacity(0)
-  mainWindow.show()
   mainWindow.setIgnoreMouseEvents(false)
+  mainWindow.show()
   mainWindow.focus()
 
   if (!activated) {
@@ -86,6 +88,7 @@ export function hideWindow(): void {
   isActive = false
   mainWindow.setOpacity(0)
   mainWindow.setIgnoreMouseEvents(true, { forward: true })
+  mainWindow.setPosition(OFFSCREEN_X, OFFSCREEN_Y)
 }
 
 export function toggleWindow(): void {
