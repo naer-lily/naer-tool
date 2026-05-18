@@ -207,7 +207,7 @@ Log "Updater exiting"`
       logger.info('[Updater] launching updater script, appDir=%s log=%s', appDir, UPDATE_LOG)
 
       spawn('powershell', [
-        '-NoProfile', '-WindowStyle', 'Hidden',
+        '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
         '-File', scriptPath,
         '-OldDir', appDir,
         '-NewDir', extractDir,
@@ -216,7 +216,8 @@ Log "Updater exiting"`
         '-Pid', String(process.pid)
       ], { detached: true, stdio: 'ignore' }).unref()
 
-      setImmediate(() => app.quit())
+      // 给 OS 时间创建子进程，避免 app.quit() 在 spawn 完成前杀掉事件循环
+      setTimeout(() => app.quit(), 1000)
     } catch (e) {
       this.updating = false
       throw e
