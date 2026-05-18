@@ -19,12 +19,16 @@ export function registerIpc(): void {
     return searchEngine.search(payload.text)
   })
 
-  ipcMain.handle(IPC.EXECUTE, (_event, payload: { pluginId: string; commandId: string; input: string }) => {
+  ipcMain.handle(IPC.EXECUTE, async (_event, payload: { pluginId: string; commandId: string; input: string }) => {
     logger.trace('[IPC] EXECUTE plugin=%s cmd=%s input=%s', payload.pluginId, payload.commandId, payload.input)
-    // Fire-and-forget: let the command run in background if it awaits a WebView close
-    searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
-      .catch((err: Error) => logger.error('[IPC] EXECUTE background error:', err))
-    return { webViewOpened: webViewManager.isActive }
+    try {
+      await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+    } catch (err) {
+      logger.error('[IPC] EXECUTE error:', err)
+    }
+    const active = webViewManager.isActive
+    logger.trace('[IPC] EXECUTE done isActive=%s', active)
+    return { webViewOpened: active }
   })
 
   ipcMain.on(IPC.CLOSE, () => {

@@ -174,6 +174,12 @@ function createViewState() {
     logger.trace('[VS] selectResult execute returned webViewOpened=%s state=%s', result.webViewOpened, state.value.id)
     if (result.webViewOpened) return
 
+    // State already reset (e.g. user pressed Escape → closeWebView), skip duplicate cleanup
+    if (state.value.id === 'home') {
+      logger.trace('[VS] selectResult state already home, skipping cleanup')
+      return
+    }
+
     query.value = ''
     results.value = []
     activeIndex.value = 0
