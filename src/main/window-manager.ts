@@ -13,6 +13,11 @@ const OFFSCREEN_Y = -9999
 let mainWindow: BrowserWindow | null = null
 let isActive = false
 let lastResizeTime = 0
+let shouldHideOnBlur = true
+
+export function setShouldHideOnBlur(value: boolean): void {
+  shouldHideOnBlur = value
+}
 
 export function markResizeTime(): void {
   lastResizeTime = Date.now()
@@ -41,9 +46,13 @@ export function createWindow(): void {
 
   mainWindow.on('blur', () => {
     const sinceResize = Date.now() - lastResizeTime
-    logger.trace('[WM] blur event, sinceResize=%dms isActive=%s', sinceResize, isActive)
+    logger.trace('[WM] blur event, sinceResize=%dms shouldHideOnBlur=%s', sinceResize, shouldHideOnBlur)
+    if (!shouldHideOnBlur) {
+      logger.trace('[WM] blur suppressed: shouldHideOnBlur=false')
+      return
+    }
     if (sinceResize < 300) {
-      logger.trace('[WM] blur suppressed (within %dms of resize)', sinceResize)
+      logger.trace('[WM] blur suppressed: within %dms of resize', sinceResize)
       return
     }
     hideWindow()

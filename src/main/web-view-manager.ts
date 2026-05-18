@@ -2,7 +2,7 @@ import { WebContentsView, app } from 'electron'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getMainWindow, markResizeTime } from '@main/window-manager'
+import { getMainWindow, markResizeTime, setShouldHideOnBlur } from '@main/window-manager'
 import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
@@ -81,6 +81,7 @@ class WebViewManager {
   private closeResolver: ((data: unknown) => void) | null = null
   private closePromise: Promise<unknown> | null = null
   private lastMessage: unknown = undefined
+  private opening = false
 
   open(config: WebViewConfig): Promise<unknown> {
     const mainWin = getMainWindow()
@@ -98,6 +99,8 @@ class WebViewManager {
 
     if (this.view) this.close()
 
+    setShouldHideOnBlur(false)
+    this.opening = true
     this.view = getWebView(config)
     this.view.setBackgroundColor('#00000000')
 
@@ -126,6 +129,8 @@ class WebViewManager {
 
     this.view.webContents.on('dom-ready', () => {
       logger.trace('[WVM] dom-ready fired')
+      this.opening = false
+      setShouldHideOnBlur(true)
       if (config.injectBaseStyles) {
         this.view!.webContents.insertCSS(BASE_CSS).catch((e: Error) => logger.warn('[WVM] insertCSS failed:', e.message))
       }
@@ -147,6 +152,8 @@ class WebViewManager {
     logger.trace('[WVM] close called data=%o', webViewData)
     const mainWin = getMainWindow()
 
+    setShouldHideOnBlur(true)
+    this.opening = false
     const resolveData = webViewData !== undefined ? webViewData : this.lastMessage
 
     if (this.view) {
@@ -218,6 +225,10 @@ class WebViewManager {
 
   get isActive(): boolean {
     return this.view !== null
+  }
+
+  get isOpening(): boolean {
+    return this.opening
   }
 }
 
