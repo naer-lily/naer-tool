@@ -2,7 +2,7 @@ import { WebContentsView, app } from 'electron'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getMainWindow, setSuppressBlurHide } from '@main/window-manager'
+import { getMainWindow } from '@main/window-manager'
 import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
@@ -181,7 +181,6 @@ class WebViewManager {
     const mainWin = getMainWindow()
     if (!mainWin) return
 
-    setSuppressBlurHide(true)
     const totalHeight = SEARCH_HEIGHT + height
 
     mainWin.setResizable(true)
@@ -196,18 +195,15 @@ class WebViewManager {
         height: height - BOTTOM_SHADOW_SPACE
       })
     }
-    setImmediate(() => setSuppressBlurHide(false))
   }
 
   restoreWindowSize(): void {
     const mainWin = getMainWindow()
     if (!mainWin) return
 
-    setSuppressBlurHide(true)
     mainWin.setResizable(true)
     mainWin.setSize(WIN_WIDTH, 400)
     mainWin.setResizable(false)
-    setImmediate(() => setSuppressBlurHide(false))
   }
 
   get isActive(): boolean {
