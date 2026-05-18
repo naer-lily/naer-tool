@@ -6,7 +6,6 @@ import { logger } from '@main/logger'
 export interface FutariConfig {
   shortcut?: string
   theme?: 'light' | 'dark'
-  plugins?: string[]
 }
 
 const CONFIG_DIR = join(homedir(), '.futari')
@@ -22,8 +21,7 @@ class ConfigManager {
     if (!existsSync(CONFIG_PATH)) {
       const defaults: FutariConfig = {
         shortcut: 'Alt+Space',
-        theme: 'dark',
-        plugins: []
+        theme: 'dark'
       }
       this.config = defaults
       this.save()
@@ -31,10 +29,10 @@ class ConfigManager {
     } else {
       try {
         this.config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'))
-        logger.info('[Config] loaded config %d plugins', (this.config.plugins || []).length)
+        logger.info('[Config] loaded config')
       } catch (e) {
         logger.error('[Config] failed to parse config:', e)
-        this.config = { shortcut: 'Alt+Space', theme: 'dark', plugins: [] }
+        this.config = { shortcut: 'Alt+Space', theme: 'dark' }
       }
     }
     return this.config
@@ -45,29 +43,6 @@ class ConfigManager {
       writeFileSync(CONFIG_PATH, JSON.stringify(this.config, null, 2), 'utf-8')
     } catch (e) {
       logger.error('[Config] failed to save config:', e)
-    }
-  }
-
-  getPlugins(): string[] {
-    return this.config.plugins || []
-  }
-
-  addPlugin(pluginPath: string): void {
-    if (!this.config.plugins) this.config.plugins = []
-    const normalized = pluginPath.replace(/\\/g, '/')
-    if (!this.config.plugins.some(p => p.replace(/\\/g, '/') === normalized)) {
-      this.config.plugins.push(pluginPath)
-      this.save()
-      logger.info('[Config] added plugin: %s', pluginPath)
-    }
-  }
-
-  removePlugin(pluginPath: string): void {
-    if (this.config.plugins) {
-      const normalized = pluginPath.replace(/\\/g, '/')
-      this.config.plugins = this.config.plugins.filter(p => p.replace(/\\/g, '/') !== normalized)
-      this.save()
-      logger.info('[Config] removed plugin: %s', pluginPath)
     }
   }
 

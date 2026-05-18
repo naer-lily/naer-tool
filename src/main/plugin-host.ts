@@ -1,4 +1,10 @@
+import { readdirSync, existsSync } from 'fs'
+import { join } from 'path'
+import { homedir } from 'os'
 import type { IPlugin, IFallbackCommand, ICommand } from '@shared/plugin-api'
+import { logger } from '@main/logger'
+
+const PLUGINS_DIR = join(homedir(), '.futari', 'plugins')
 
 class PluginHost {
   private plugins = new Map<string, IPlugin>()
@@ -10,26 +16,6 @@ class PluginHost {
 
   getAll(): IPlugin[] {
     return Array.from(this.plugins.values())
-  }
-
-  async load(pluginId: string, pluginPath: string): Promise<IPlugin> {
-    if (this.plugins.has(pluginId)) {
-      throw new Error(`Plugin "${pluginId}" already loaded`)
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require(pluginPath)
-    const plugin: IPlugin = mod.default || mod
-
-    if (!plugin.id || !plugin.name) {
-      throw new Error(`Plugin at "${pluginPath}" missing id or name`)
-    }
-
-    await plugin.onActivate({})
-
-    this.plugins.set(plugin.id, plugin)
-    this.pluginPaths.set(plugin.id, pluginPath)
-    return plugin
   }
 
   async loadFromPath(pluginPath: string): Promise<IPlugin> {
@@ -52,6 +38,7 @@ class PluginHost {
     await plugin.onActivate({})
     this.plugins.set(plugin.id, plugin)
     this.pluginPaths.set(plugin.id, pluginPath)
+    logger.info('[PluginHost] loaded: %s (%s)', plugin.id, pluginPath)
     return plugin
   }
 
@@ -60,32 +47,46 @@ class PluginHost {
     if (!plugin) return
 
     await plugin.onDeactivate()
-
     this.plugins.delete(pluginId)
 
     const p = this.pluginPaths.get(pluginId)
     if (p && !p.startsWith('builtin:')) {
-      delete require.cache[require.resolve(p)]
+      try {
+        delete require.cache[require.resolve(p)]
+      } catch { /* already cleared */ }
     }
     this.pluginPaths.delete(pluginId)
   }
 
-  async reload(pluginId: string): Promise<IPlugin> {
-    const p = this.pluginPaths.get(pluginId)
-    if (!p) throw new Error(`Plugin "${pluginId}" not found`)
-    await this.unload(pluginId)
-    return this.load(pluginId, p)
-  }
-
-  async reloadAll(): Promise<IPlugin[]> {
-    const ids = Array.from(this.plugins.keys())
+  /** 扫描 ~/.futari/plugins/ 目录，加载所有用户插件（先卸载旧的全部再重新加载） */
+  async scanAndLoadUserPlugins(): Promise<IPlugin[]> {
     const results: IPlugin[] = []
-    for (const id of ids) {
-      const p = this.pluginPaths.get(id)
-      if (!p || p.startsWith('builtin:')) continue
-      await this.unload(id)
-      results.push(await this.load(id, p))
+
+    // unload existing user plugins
+    for (const [id, p] of this.pluginPaths) {
+      if (!p.startsWith('builtin:')) {
+        await this.unload(id)
+      }
     }
+
+    if (!existsSync(PLUGINS_DIR)) return results
+
+    const entries = readdirSync(PLUGINS_DIR, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const dir = join(PLUGINS_DIR, entry.name)
+      if (!existsSync(join(dir, 'package.json'))) continue
+
+      try {
+        // Node require(dir) resolves via package.json main field
+        const plugin = await this.loadFromPath(dir)
+        results.push(plugin)
+      } catch (e) {
+        logger.error('[PluginHost] failed to load %s:', dir, e)
+      }
+    }
+
+    logger.info('[PluginHost] scan complete: %d user plugins loaded', results.length)
     return results
   }
 

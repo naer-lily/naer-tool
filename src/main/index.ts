@@ -30,14 +30,7 @@ function registerBuiltinPlugins(): void {
 }
 
 function loadUserPlugins(): void {
-  for (const pluginPath of configManager.getPlugins()) {
-    try {
-      pluginHost.loadFromPath(pluginPath)
-      logger.info('[App] loaded user plugin: %s', pluginPath)
-    } catch (e) {
-      logger.error('[App] failed to load user plugin %s:', pluginPath, e)
-    }
-  }
+  pluginHost.scanAndLoadUserPlugins()
 }
 
 app.whenReady().then(() => {
