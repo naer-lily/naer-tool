@@ -20,6 +20,28 @@ my-plugin/
 └── lib.js          ← 共享模块（可选）
 ```
 
+### 1.1 类型声明的分发方式
+
+Futari 附带一个**本地类型包** `futari-plugin-types`，插件无需手动拷贝 `.d.ts`。插件通过 `package.json` 的 `devDependencies` 引用：
+
+```json
+{
+  "devDependencies": {
+    "futari-plugin-types": "file:C:/absolute/path/to/futari/types"
+  }
+}
+```
+
+`npm install` 后会在 `node_modules/` 创建符号链接，IDE 自动获得类型提示。
+
+使用 `创建插件` 命令生成的 `package.json` 已内置此项。若手动创建插件，可在目录下执行：
+
+```bash
+npm install --save-dev "C:/path/to/futari/types"
+```
+
+> **注意**: 即使不安装类型包，同目录下的 `index.d.ts` 也会被 IDE 自动识别。类型包主要用于避免在多插件项目中重复拷贝 `.d.ts`。
+
 ---
 
 ## 2. 三套执行环境
@@ -268,15 +290,43 @@ execute(ctx) {
 
 ```typescript
 interface WebViewConfig {
-  html?: string        // 内联 HTML 字符串（data URI 加载）
-  htmlPath?: string    // 本地 HTML 文件路径（file:// 加载）← 支持 <script src>
-  url?: string         // 任意 URL（http:// 或 file://）
-  preload?: string     // preload 脚本路径 ← 支持 require('./lib')
-  height?: number      // 视图高度（默认 450）
+  html?: string            // 内联 HTML 字符串（data URI 加载）
+  htmlPath?: string        // 本地 HTML 文件路径（file:// 加载）← 支持 <script src>
+  url?: string             // 任意 URL（http:// 或 file://）
+  preload?: string         // preload 脚本路径 ← 支持 require('./lib')
+  height?: number          // 视图高度（默认 450）
+  injectBaseStyles?: boolean  // 注入基础样式（默认 false，按需开启）
 }
 ```
 
-### 6.6 futariWeb API（页面内使用）
+### 6.6 基础样式注入 (`injectBaseStyles`)
+
+当 `injectBaseStyles: true` 时，Futari 自动注入以下样式：
+
+- **盒模型**: `*,*::before,*::after{box-sizing:border-box}`
+- **平滑滚动**: `html{scroll-behavior:smooth}`
+- **字体**: 系统默认字体栈（含中文字体）
+- **滚动条美化**: 6px 半透明滚动条（暗色/亮色背景通用）
+
+```javascript
+// 开启基础样式（适合手写 HTML，免去重复 CSS）
+ctx.openWebView({
+  htmlPath: path.join(__dirname, 'page.html'),
+  preload: path.join(__dirname, 'preload.js'),
+  height: 400,
+  injectBaseStyles: true
+})
+
+// 不开启（默认）— 适合已有完整 CSS 的现成页面
+ctx.openWebView({
+  url: 'https://example.com',   // 不污染现有样式
+  height: 600
+})
+```
+
+**注意**: 默认关闭 `injectBaseStyles`。如果你引用第三方页面或已有完善样式，不要开启此选项，否则可能覆盖原有样式。
+
+### 6.7 futariWeb API（页面内使用）
 
 WebView 页面中可用 `window.futariWeb`，无需任何导入：
 

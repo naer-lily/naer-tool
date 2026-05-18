@@ -1,0 +1,7 @@
+{
+  "name": "futari-plugin-types",
+  "version": "1.0.0",
+  "description": "Futari 插件类型声明（本地 npm 包，不发布）",
+  "types": "./index.d.ts",
+  "private": true
+}

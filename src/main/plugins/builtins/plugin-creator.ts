@@ -1,4 +1,6 @@
 import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
+import { app } from 'electron'
+import { join } from 'path'
 
 function sanitizeFileName(name: string): string {
   return name.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 60) || 'new-plugin'
@@ -46,7 +48,8 @@ const plugin = {
     // ctx.openWebView({
     //   htmlPath: path.join(__dirname, 'page.html'),  // <script src="./lib.js"> 可用
     //   preload: path.join(__dirname, 'preload.js'),  // require('./lib.js') 可用
-    //   height: 400
+    //   height: 400,
+    //   injectBaseStyles: true  // 注入滚动条美化+盒模型+字体（默认关闭，按需开启）
     // })
   },
 
@@ -103,6 +106,7 @@ declare namespace Futari {
     url?: string
     preload?: string
     height?: number
+    injectBaseStyles?: boolean
   }
 
   interface FormField {
@@ -151,14 +155,17 @@ export default plugin
 `
 }
 
-function scaffoldPackageJson(pluginName: string, pluginId: string): string {
+function scaffoldPackageJson(pluginName: string, pluginId: string, typesPath: string): string {
   return JSON.stringify({
     name: pluginId,
     version: '0.1.0',
     description: pluginName,
     main: './index.js',
     types: './index.d.ts',
-    dependencies: {}
+    dependencies: {},
+    devDependencies: {
+      'futari-plugin-types': `file:${typesPath.replace(/\\/g, '/')}`
+    }
   }, null, 2) + '\n'
 }
 
@@ -204,7 +211,7 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
     fsp.mkdirSync(pluginDir)
     fsp.writeFileSync(pth.join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
     fsp.writeFileSync(pth.join(pluginDir, 'index.d.ts'), scaffoldDts(), 'utf-8')
-    fsp.writeFileSync(pth.join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId), 'utf-8')
+    fsp.writeFileSync(pth.join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId, join(app.getAppPath(), 'types')), 'utf-8')
     ctx.toast(`插件已创建: ${pluginDir}`)
   } catch (e) {
     ctx.toast(`创建失败: ${String(e).slice(0, 80)}`)

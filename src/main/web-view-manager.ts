@@ -15,6 +15,16 @@ const CONTAINER_X = Math.round((WIN_WIDTH - CONTAINER_WIDTH) / 2)
 const SEARCH_HEIGHT = 64
 const BOTTOM_SHADOW_SPACE = 16
 
+const BASE_CSS = `
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.6;background:transparent}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(128,128,128,.3);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(128,128,128,.5)}
+`.trim()
+
 let tempPreloadPath: string | null = null
 
 function buildPreload(config: WebViewConfig): string {
@@ -93,16 +103,16 @@ class WebViewManager {
     }
 
     this.view.webContents.on('dom-ready', () => {
+      if (config.injectBaseStyles) {
+        this.view!.webContents.insertCSS(BASE_CSS).catch(() => {})
+      }
       const height = config.height || 450
       this.setExpandedHeight(height)
+      mainWin.webContents.send('show-web-view', { height })
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
     })
-
-    mainWin.webContents.send('show-web-view', { height: config.height || 450 })
-    mainWin.focus()
-    mainWin.webContents.focus()
   }
 
   close(): void {

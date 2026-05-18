@@ -4,4 +4,5 @@ export interface WebViewConfig {
   url?: string
   preload?: string
   height?: number
+  injectBaseStyles?: boolean
 }

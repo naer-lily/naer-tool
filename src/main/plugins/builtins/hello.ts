@@ -175,7 +175,8 @@ const helloPlugin: IPlugin = {
         ctx.openWebView({
           htmlPath,
           preload: preloadPath,
-          height: 480
+          height: 480,
+          injectBaseStyles: true
         })
       }
     }]
