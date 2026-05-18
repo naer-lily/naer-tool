@@ -5,6 +5,7 @@ import { hideWindow, getMainWindow } from '@main/window-manager'
 import { showScreenToast } from '@main/toast'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
+import { logger } from '@main/logger'
 
 export function registerIpc(): void {
   ipcMain.handle(IPC.SEARCH, async (_event, payload: { text: string; pluginId?: string }) => {
@@ -18,8 +19,11 @@ export function registerIpc(): void {
     return searchEngine.search(payload.text)
   })
 
-  ipcMain.handle(IPC.EXECUTE, async (_event, payload: { pluginId: string; commandId: string; input: string }) => {
-    await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+  ipcMain.handle(IPC.EXECUTE, (_event, payload: { pluginId: string; commandId: string; input: string }) => {
+    logger.trace('[IPC] EXECUTE plugin=%s cmd=%s input=%s', payload.pluginId, payload.commandId, payload.input)
+    // Fire-and-forget: let the command run in background if it awaits a WebView close
+    searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+      .catch((err: Error) => logger.error('[IPC] EXECUTE background error:', err))
     return { webViewOpened: webViewManager.isActive }
   })
 
@@ -40,8 +44,9 @@ export function registerIpc(): void {
     webViewManager.sendInput(text)
   })
 
-  ipcMain.on(IPC.CLOSE_WEB_VIEW, () => {
-    webViewManager.close()
+  ipcMain.on(IPC.CLOSE_WEB_VIEW, (_event, data?: unknown) => {
+    logger.trace('[IPC] CLOSE_WEB_VIEW data=%o', data)
+    webViewManager.close(data)
   })
 
   ipcMain.on(IPC.WEB_VIEW_RESIZE, (_event, height: number) => {
@@ -50,19 +55,5 @@ export function registerIpc(): void {
 
   ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
     webViewManager.handleMessage(data)
-  })
-
-  ipcMain.on(IPC.WEB_VIEW_RESIZE, (_event, height: number) => {
-    webViewManager.handleResize(height)
-  })
-
-  ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
-    console.log('[IPC] WEB_VIEW_MESSAGE:', data)
-    webViewManager.handleMessage(data)
-  })
-
-  ipcMain.on(IPC.WEB_VIEW_RESIZE, (_event, height: number) => {
-    console.log('[IPC] WEB_VIEW_RESIZE:', height)
-    webViewManager.handleResize(height)
   })
 }

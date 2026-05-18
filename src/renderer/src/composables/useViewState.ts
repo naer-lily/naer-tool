@@ -1,5 +1,6 @@
 import { ref, computed, nextTick } from 'vue'
 import type { SearchResult } from '@shared/plugin-api'
+import { logger } from '@/utils/logger'
 
 type ViewState =
   | { id: 'home' }
@@ -53,42 +54,50 @@ function createViewState() {
   })
 
   function dispatch(event: ViewEvent): boolean {
+    const prevId = state.value.id
     const s = state.value
 
     switch (event.type) {
       case 'enter-subcommand':
         state.value = { id: 'subcommand', pluginId: event.pluginId, icon: event.icon || null }
+        logger.trace('[VS] dispatch %s → subcommand plugin=%s icon=%s', prevId, event.pluginId, event.icon || null)
         return true
 
       case 'exit-subcommand':
         if (s.id !== 'subcommand') return false
         state.value = { id: 'home' }
+        logger.trace('[VS] dispatch subcommand → home')
         return true
 
       case 'open-webview':
         state.value = { id: 'webview-loading', height: event.height, icon: event.icon }
+        logger.trace('[VS] dispatch %s → webview-loading icon=%s height=%d', prevId, event.icon, event.height)
         return true
 
       case 'webview-ready':
         if (s.id !== 'webview-loading') return false
         state.value = { id: 'webview-active', height: s.height, icon: s.icon }
+        logger.trace('[VS] dispatch webview-loading → webview-active icon=%s', s.icon)
         return true
 
       case 'close-webview':
         if (s.id !== 'webview-loading' && s.id !== 'webview-active') return false
         state.value = { id: 'home' }
+        logger.trace('[VS] dispatch %s → home', prevId)
         return true
 
       case 'focus-input':
         if (s.id === 'webview-loading' || s.id === 'webview-active') return false
         if (s.id === 'subcommand') {
           state.value = { id: 'home' }
+          logger.trace('[VS] dispatch focus-input: subcommand → home')
         }
         return true
 
       case 'auto-activate':
         if (s.id === 'webview-loading' || s.id === 'webview-active') return false
         state.value = { id: 'subcommand', pluginId: event.pluginId, icon: event.icon || null }
+        logger.trace('[VS] dispatch auto-activate %s → subcommand plugin=%s', prevId, event.pluginId)
         return true
 
       default:
@@ -159,8 +168,10 @@ function createViewState() {
     }
 
     const pluginId = activePluginId.value || item.pluginId
+    logger.trace('[VS] selectResult idx=%d cmd=%s plugin=%s', index, item.id, pluginId)
     const result = await window.futariAPI.execute(pluginId, item.id, query.value)
 
+    logger.trace('[VS] selectResult execute returned webViewOpened=%s state=%s', result.webViewOpened, state.value.id)
     if (result.webViewOpened) return
 
     query.value = ''
@@ -208,13 +219,15 @@ function createViewState() {
   }
 
   function handleShowWebView(payload: { height: number }): void {
-    const icon = state.value.id === 'subcommand' ? state.value.icon : null
-    dispatch({ type: 'open-webview', height: payload.height, icon })
+    const currentIcon = state.value.id === 'subcommand' ? state.value.icon : null
+    logger.trace('[VS] handleShowWebView currentState=%s capturedIcon=%s height=%d', state.value.id, currentIcon, payload.height)
+    dispatch({ type: 'open-webview', height: payload.height, icon: currentIcon })
     results.value = []
     activeIndex.value = 0
   }
 
   function handleWebViewReady(): void {
+    logger.trace('[VS] handleWebViewReady state=%s', state.value.id)
     dispatch({ type: 'webview-ready' })
     const input = document.querySelector('.search-input input') as HTMLInputElement | null
     input?.focus()

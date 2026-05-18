@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from '
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { getMainWindow } from '@main/window-manager'
+import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
 const RESOURCES_DIR = app.isPackaged
@@ -77,10 +78,23 @@ function getWebView(config: WebViewConfig): WebContentsView {
 
 class WebViewManager {
   view: WebContentsView | null = null
+  private closeResolver: ((data: unknown) => void) | null = null
+  private closePromise: Promise<unknown> | null = null
+  private lastMessage: unknown = undefined
 
-  open(config: WebViewConfig): void {
+  open(config: WebViewConfig): Promise<unknown> {
     const mainWin = getMainWindow()
-    if (!mainWin) return
+    if (!mainWin) {
+      logger.warn('[WVM] open: no main window')
+      return Promise.resolve(undefined)
+    }
+
+    logger.trace('[WVM] open called htmlPath=%s htmlLen=%d preload=%s height=%d injectCSS=%s',
+      config.htmlPath || null,
+      config.html ? config.html.length : 0,
+      config.preload || null,
+      config.height || 450,
+      String(config.injectBaseStyles || false))
 
     if (this.view) this.close()
 
@@ -88,23 +102,31 @@ class WebViewManager {
     this.view.setBackgroundColor('#00000000')
 
     mainWin.contentView.addChildView(this.view)
-
     this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height: 1 })
 
     if (config.html) {
       const b64 = Buffer.from(config.html, 'utf-8').toString('base64')
       const dataUrl = `data:text/html;charset=utf-8;base64,${b64}`
       this.view.webContents.loadURL(dataUrl)
+      logger.trace('[WVM] loadURL data URI len=%d', b64.length)
     } else if (config.htmlPath) {
       const fileUrl = `file:///${config.htmlPath.replace(/\\/g, '/')}`
       this.view.webContents.loadURL(fileUrl)
+      logger.trace('[WVM] loadURL file=%s', fileUrl)
     } else if (config.url) {
       this.view.webContents.loadURL(config.url)
+      logger.trace('[WVM] loadURL url=%s', config.url)
     }
 
+    this.lastMessage = undefined
+    this.closePromise = new Promise((resolve) => {
+      this.closeResolver = resolve
+    })
+
     this.view.webContents.on('dom-ready', () => {
+      logger.trace('[WVM] dom-ready fired')
       if (config.injectBaseStyles) {
-        this.view!.webContents.insertCSS(BASE_CSS).catch(() => {})
+        this.view!.webContents.insertCSS(BASE_CSS).catch((e: Error) => logger.warn('[WVM] insertCSS failed:', e.message))
       }
       const height = config.height || 450
       this.setExpandedHeight(height)
@@ -112,23 +134,33 @@ class WebViewManager {
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
+      logger.trace('[WVM] sent show-web-view(%d) + web-view-ready', height)
     })
+
+    return this.closePromise
   }
 
-  close(): void {
+  close(webViewData?: unknown): void {
+    logger.trace('[WVM] close called data=%o', webViewData)
     const mainWin = getMainWindow()
-    if (!mainWin) return
+
+    const resolveData = webViewData !== undefined ? webViewData : this.lastMessage
 
     if (this.view) {
-      try { mainWin.contentView.removeChildView(this.view) } catch { /* ignore */ }
+      try { mainWin?.contentView.removeChildView(this.view) } catch { /* ignore */ }
       this.view = null
     }
 
     cleanupTempPreload()
-
     this.restoreWindowSize()
 
-    mainWin.webContents.send('hide-web-view')
+    if (this.closeResolver) {
+      this.closeResolver(resolveData)
+      this.closeResolver = null
+      this.closePromise = null
+    }
+
+    mainWin?.webContents.send('hide-web-view')
   }
 
   sendInput(text: string): void {
@@ -140,6 +172,7 @@ class WebViewManager {
   }
 
   handleMessage(data: unknown): void {
+    this.lastMessage = data
     const mainWin = getMainWindow()
     mainWin?.webContents.send('web-view-message', data)
   }

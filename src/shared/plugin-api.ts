@@ -26,7 +26,7 @@ export interface CommandContext {
   input: string
   toast(message: string): void
   showForm(config: FormConfig): Promise<Record<string, unknown> | null>
-  openWebView: (config: WebViewConfig) => void
+  openWebView: (config: WebViewConfig) => Promise<unknown>
   closeWebView: () => void
 }
 

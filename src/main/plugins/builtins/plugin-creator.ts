@@ -45,12 +45,17 @@ const plugin = {
     //
     // WebView 分文件开发示例:
     // const path = require('path')
-    // ctx.openWebView({
-    //   htmlPath: path.join(__dirname, 'page.html'),  // <script src="./lib.js"> 可用
-    //   preload: path.join(__dirname, 'preload.js'),  // require('./lib.js') 可用
-    //   height: 400,
-    //   injectBaseStyles: true  // 注入滚动条美化+盒模型+字体（默认关闭，按需开启）
-    // })
+    // async execute(ctx) {
+    //   // openWebView 返回 Promise, 在 WebView 关闭时 resolve
+    //   const result = await ctx.openWebView({
+    //     htmlPath: path.join(__dirname, 'page.html'),  // <script src="./lib.js"> 可用
+    //     preload: path.join(__dirname, 'preload.js'),  // require('./lib.js') 可用
+    //     height: 400,
+    //     injectBaseStyles: true
+    //   })
+    //   // WebView 关闭后才执行这里; result 来自 futariWeb.close(data) 的值
+    //   ctx.toast('WebView 已关闭' + (result ? ': ' + JSON.stringify(result) : ''))
+    // }
   },
 
   // 全局命令（主模式匹配）：不需要前缀
@@ -96,7 +101,7 @@ declare namespace Futari {
     input: string
     toast(message: string): void
     showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
-    openWebView(config: Futari.WebViewConfig): void
+    openWebView(config: Futari.WebViewConfig): Promise<unknown>
     closeWebView(): void
   }
 

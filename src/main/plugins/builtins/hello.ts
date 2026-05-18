@@ -170,14 +170,15 @@ const helloPlugin: IPlugin = {
       match(_input: string): CommandMatch | null {
         return { preview: 'htmlPath + preload + 共享 lib.js — 演示分文件开发', priority: 7 }
       },
-      execute(ctx: CommandContext): void {
+      async execute(ctx: CommandContext): Promise<void> {
         const { htmlPath, preloadPath } = setupMultiFileTest()
-        ctx.openWebView({
+        const result = await ctx.openWebView({
           htmlPath,
           preload: preloadPath,
           height: 480,
           injectBaseStyles: true
         })
+        ctx.toast('多文件 WebView 已关闭' + (result ? ': ' + JSON.stringify(result) : ''))
       }
     }]
   },

@@ -2,6 +2,7 @@ import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
+import { logger } from '@main/logger'
 import { readFileSync, existsSync } from 'fs'
 import { resolve as pathResolve, extname, isAbsolute } from 'path'
 import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
@@ -171,7 +172,12 @@ class SearchEngine {
 
   async execute(pluginId: string, commandId: string, input: string, showToast: (msg: string) => void): Promise<void> {
     const plugin = pluginHost.get(pluginId)
-    if (!plugin) return
+    if (!plugin) {
+      logger.warn('[SE] execute: plugin not found id=%s', pluginId)
+      return
+    }
+
+    logger.trace('[SE] execute plugin=%s cmd=%s input=%s', pluginId, commandId, input)
 
     const ctx: CommandContext = {
       input,

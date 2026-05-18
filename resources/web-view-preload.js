@@ -19,7 +19,7 @@ window.futariWeb = {
     return ipcRenderer.invoke('get-theme')
   },
 
-  close() {
-    ipcRenderer.send('close-web-view')
+  close(data) {
+    ipcRenderer.send('close-web-view', data)
   }
 }

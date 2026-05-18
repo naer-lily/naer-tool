@@ -12,7 +12,7 @@ declare namespace Futari {
     input: string
     toast(message: string): void
     showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
-    openWebView(config: Futari.WebViewConfig): void
+    openWebView(config: Futari.WebViewConfig): Promise<unknown>
     closeWebView(): void
   }
 
