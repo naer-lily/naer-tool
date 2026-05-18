@@ -1,5 +1,7 @@
 # Futari
 
+<img src="resources/icon.png" alt="Futari" width="64" align="right">
+
 Plugin-based command launcher for Windows. Type less, do more.
 
 Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.

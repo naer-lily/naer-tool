@@ -1,29 +1,16 @@
-import { app, Tray, Menu, nativeImage, NativeImage } from 'electron'
+import { app, Tray, Menu, nativeImage } from 'electron'
+import { join } from 'path'
 import { toggleWindow, getMainWindow } from '@main/window-manager'
 
 let tray: Tray | null = null
 
-function createTrayIcon(): NativeImage {
-  const size = 16
-  const buf = Buffer.alloc(size * size * 4)
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = x - size / 2 + 0.5
-      const dy = y - size / 2 + 0.5
-      if (dx * dx + dy * dy < (size / 2 - 1) ** 2) {
-        const offset = (y * size + x) * 4
-        buf[offset] = 210
-        buf[offset + 1] = 110
-        buf[offset + 2] = 50
-        buf[offset + 3] = 255
-      }
-    }
-  }
-  return nativeImage.createFromBitmap(buf, { width: size, height: size })
+function getIconPath(): string {
+  return join(app.getAppPath(), 'resources', 'icon.png')
 }
 
 export function createTray(): void {
-  tray = new Tray(createTrayIcon())
+  const icon = nativeImage.createFromPath(getIconPath()).resize({ width: 16, height: 16 })
+  tray = new Tray(icon)
   tray.setToolTip('Futari')
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '显示/隐藏', click: toggleWindow },
