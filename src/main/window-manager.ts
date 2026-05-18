@@ -39,7 +39,7 @@ export function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    showWindow()
+    hideWindow()
   })
 
   if (process.env['ELECTRON_RENDERER_URL']) {

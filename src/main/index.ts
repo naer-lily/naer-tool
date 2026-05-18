@@ -8,7 +8,6 @@ import { prefixRegistry } from '@main/prefix-registry'
 import { configManager } from '@main/config'
 import { logger } from '@main/logger'
 import { companionManager } from '@main/companion-manager'
-import helloPlugin from '@main/plugins/builtins/hello'
 import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
 import reloadPlugin from '@main/plugins/builtins/reload'
@@ -16,7 +15,6 @@ import pluginCreator from '@main/plugins/builtins/plugin-creator'
 import settingsPlugin from '@main/plugins/builtins/settings'
 
 async function registerBuiltinPlugins(): Promise<void> {
-  await pluginHost.activateBuiltin(helloPlugin, 'hello')
   await pluginHost.activateBuiltin(calculatorPlugin, 'calculator')
   await pluginHost.activateBuiltin(runPlugin, 'run')
   await pluginHost.activateBuiltin(reloadPlugin, 'reload')
