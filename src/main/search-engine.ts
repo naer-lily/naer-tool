@@ -195,9 +195,11 @@ class SearchEngine {
       toast: showToast,
       showForm: (config) => formDialog.show(config),
       openWebView: async (config) => {
+        logger.trace('[SE] openWebView called hadWebView=%s', hadWebView)
         hadWebView = true
         const result = await webViewManager.open(config)
         webViewResult = result
+        logger.trace('[SE] openWebView resolved result=%o', result)
         return result
       },
       closeWebView: () => webViewManager.close(),
@@ -228,7 +230,9 @@ class SearchEngine {
     const cmd = await this.resolveCommand(plugin, commandId, input, pluginId)
     let outcome: CommandOutcome | void = undefined
     if (cmd) {
+      logger.trace('[SE] executing cmd=%s', commandId)
       outcome = await cmd.execute(ctx)
+      logger.trace('[SE] cmd.execute returned outcome=%s', outcome)
     }
 
     let shouldClose: boolean

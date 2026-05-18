@@ -2,7 +2,7 @@ import { WebContentsView, app } from 'electron'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getMainWindow } from '@main/window-manager'
+import { getMainWindow, markResizeTime } from '@main/window-manager'
 import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
@@ -122,6 +122,7 @@ class WebViewManager {
     this.closePromise = new Promise((resolve) => {
       this.closeResolver = resolve
     })
+    logger.trace('[WVM] closePromise created')
 
     this.view.webContents.on('dom-ready', () => {
       logger.trace('[WVM] dom-ready fired')
@@ -132,11 +133,13 @@ class WebViewManager {
       this.setExpandedHeight(height)
       mainWin.webContents.send('show-web-view', { height, icon: config.pluginIcon || null })
       mainWin.webContents.send('web-view-ready')
+      logger.trace('[WVM] about to focus mainWin, isFocused=%s', mainWin.isFocused())
       mainWin.focus()
       mainWin.webContents.focus()
       logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', height, config.pluginIcon || null)
     })
 
+    logger.trace('[WVM] returning closePromise')
     return this.closePromise
   }
 
@@ -154,6 +157,7 @@ class WebViewManager {
     cleanupTempPreload()
     this.restoreWindowSize()
 
+    logger.trace('[WVM] resolving closePromise with data=%o hasResolver=%s', resolveData, !!this.closeResolver)
     if (this.closeResolver) {
       this.closeResolver(resolveData)
       this.closeResolver = null
@@ -182,6 +186,8 @@ class WebViewManager {
     if (!mainWin) return
 
     const totalHeight = SEARCH_HEIGHT + height
+    logger.trace('[WVM] setExpandedHeight h=%d total=%d, isFocused=%s', height, totalHeight, mainWin.isFocused())
+    markResizeTime()
 
     mainWin.setResizable(true)
     mainWin.setSize(WIN_WIDTH, totalHeight)
@@ -195,15 +201,19 @@ class WebViewManager {
         height: height - BOTTOM_SHADOW_SPACE
       })
     }
+    logger.trace('[WVM] setExpandedHeight done, isFocused=%s', mainWin.isFocused())
   }
 
   restoreWindowSize(): void {
     const mainWin = getMainWindow()
     if (!mainWin) return
 
+    logger.trace('[WVM] restoreWindowSize, isFocused=%s', mainWin.isFocused())
+    markResizeTime()
     mainWin.setResizable(true)
     mainWin.setSize(WIN_WIDTH, 400)
     mainWin.setResizable(false)
+    logger.trace('[WVM] restoreWindowSize done, isFocused=%s', mainWin.isFocused())
   }
 
   get isActive(): boolean {
