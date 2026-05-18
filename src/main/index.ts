@@ -11,14 +11,12 @@ import { autoUpdater } from '@main/auto-updater'
 import { companionManager } from '@main/companion-manager'
 import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
-import reloadPlugin from '@main/plugins/builtins/reload'
 import pluginCreator from '@main/plugins/builtins/plugin-creator'
 import settingsPlugin from '@main/plugins/builtins/settings'
 
 async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(calculatorPlugin, 'calculator')
   await pluginHost.activateBuiltin(runPlugin, 'run')
-  await pluginHost.activateBuiltin(reloadPlugin, 'reload')
   await pluginHost.activateBuiltin(pluginCreator, 'plugin-creator')
   await pluginHost.activateBuiltin(settingsPlugin, 'settings')
 }
