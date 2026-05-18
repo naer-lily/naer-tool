@@ -44,7 +44,7 @@ import { useSearch } from '@/composables/useSearch'
 import { useKeyboardNav } from '@/composables/useKeyboardNav'
 import { useTheme } from '@/composables/useTheme'
 
-const { theme, toggle } = useTheme()
+const { toggle } = useTheme()
 const {
   query, results, activeIndex, toast,
   searchMode, activePluginIcon,
@@ -65,11 +65,11 @@ const { onKeydown: navKeydown } = useKeyboardNav({
 
 async function onSelect(index: number): Promise<void> {
   await selectResult(index)
-  nextTick(() => searchInputRef.value?.focusInput())
+  void nextTick(() => searchInputRef.value?.focusInput())
 }
 
 function onInput(): void {
-  doSearch()
+  void doSearch()
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -82,10 +82,10 @@ function onKeydown(e: KeyboardEvent): void {
 }
 
 onMounted(() => {
-  doSearch()
+  void doSearch()
   window.futariAPI.onFocusInput(() => {
     handleFocusInput(() => {
-      nextTick(() => searchInputRef.value?.focusInput())
+      void nextTick(() => searchInputRef.value?.focusInput())
     })
   })
   window.futariAPI.onToggleTheme(() => toggle())

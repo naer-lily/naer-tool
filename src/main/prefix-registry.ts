@@ -1,8 +1,7 @@
 import { pluginHost } from '@main/plugin-host'
-import type { IPlugin } from '@shared/plugin-api'
 
 class PrefixRegistry {
-  private map = new Map<string, string>()
+  private readonly map = new Map<string, string>()
 
   /** The space after prefix is part of the trigger: user types "prefix " */
   rebuild(): void {

@@ -41,7 +41,7 @@ function onInput(e: Event): void {
 }
 
 function focusInput(): void {
-  nextTick(() => {
+  void nextTick(() => {
     inputEl.value?.focus()
   })
 }

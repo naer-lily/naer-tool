@@ -1,10 +1,10 @@
-import { type Ref } from 'vue'
+import type { Ref } from 'vue'
 import type { SearchResult } from '@shared/plugin-api'
 
 interface KeyboardNavOptions {
   results: Ref<SearchResult[]>
   activeIndex: Ref<number>
-  onSelect: (index: number) => void
+  onSelect: (index: number) => void | Promise<void>
   onEscape: () => void
 }
 
@@ -37,7 +37,7 @@ export function useKeyboardNav(opts: KeyboardNavOptions) {
 
     if (e.key === 'Enter' && opts.results.value.length > 0) {
       e.preventDefault()
-      opts.onSelect(opts.activeIndex.value)
+      void opts.onSelect(opts.activeIndex.value)
       return
     }
 
@@ -45,7 +45,7 @@ export function useKeyboardNav(opts: KeyboardNavOptions) {
       e.preventDefault()
       const idx = parseInt(e.key) - 1
       if (idx < opts.results.value.length) {
-        opts.onSelect(idx)
+        void opts.onSelect(idx)
       }
     }
   }

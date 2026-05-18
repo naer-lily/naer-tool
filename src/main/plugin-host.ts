@@ -1,7 +1,7 @@
 import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
-import type { IPlugin, IFallbackCommand, ICommand, PluginContext, CompanionConfig, CompanionHandle } from '@shared/plugin-api'
+import type { IPlugin, IFallbackCommand, PluginContext, CompanionConfig, CompanionHandle } from '@shared/plugin-api'
 import { logger, createPluginLogger } from '@main/logger'
 import { companionManager } from '@main/companion-manager'
 
@@ -24,8 +24,8 @@ async function startCompanions(pluginId: string, configs: CompanionConfig[]): Pr
 const PLUGINS_DIR = join(homedir(), '.futari', 'plugins')
 
 class PluginHost {
-  private plugins = new Map<string, IPlugin>()
-  private pluginPaths = new Map<string, string>()
+  private readonly plugins = new Map<string, IPlugin>()
+  private readonly pluginPaths = new Map<string, string>()
 
   get(pluginId: string): IPlugin | undefined {
     return this.plugins.get(pluginId)
@@ -39,7 +39,7 @@ class PluginHost {
     const resolved = require.resolve(pluginPath)
     delete require.cache[resolved]
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const mod = require(pluginPath)
     const plugin: IPlugin = mod.default || mod
 

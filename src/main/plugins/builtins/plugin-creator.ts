@@ -9,6 +9,7 @@ import { prefixRegistry } from '@main/prefix-registry'
 const PLUGINS_DIR = join(homedir(), '.futari', 'plugins')
 
 function sanitizeFileName(name: string): string {
+  // eslint-disable-next-line no-control-regex
   return name.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 60) || 'new-plugin'
 }
 

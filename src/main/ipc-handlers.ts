@@ -40,7 +40,7 @@ export function registerIpc(): void {
     formDialog.handleSubmit(event.sender.id, values)
   })
 
-  ipcMain.handle(IPC.GET_THEME, () => {
+  ipcMain.handle(IPC.GET_THEME, async () => {
     const win = getMainWindow()
     return win?.webContents.executeJavaScript('localStorage.getItem("futari-theme") || "dark"')
   })

@@ -62,9 +62,9 @@ class WindowStateMachine {
     this.win.on('ready-to-show', () => this.handleReadyToShow())
 
     if (process.env['ELECTRON_RENDERER_URL']) {
-      this.win.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      void this.win.loadURL(process.env['ELECTRON_RENDERER_URL'])
     } else {
-      this.win.loadFile(join(__dirname, '../renderer/index.html'))
+      void this.win.loadFile(join(__dirname, '../renderer/index.html'))
     }
   }
 

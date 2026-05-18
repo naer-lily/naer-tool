@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import type { BrowserWindow } from 'electron'
 import { windowStateMachine } from '@main/window-state-machine'
 import type { WindowState } from '@main/window-state-machine'
 

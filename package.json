@@ -7,7 +7,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "lint": "vue-tsc --noEmit --project tsconfig.web.json && vue-tsc --noEmit --project tsconfig.node.json",
+    "lint": "eslint . && vue-tsc --noEmit --project tsconfig.web.json && vue-tsc --noEmit --project tsconfig.node.json",
+    "lint:fix": "eslint . --fix",
     "package": "electron-vite build && electron-builder --win zip"
   },
   "dependencies": {
@@ -16,11 +17,16 @@
     "vue": "^3.4.38"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-vue": "^5.1.3",
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "eslint": "^10.4.0",
+    "eslint-plugin-vue": "^10.9.1",
     "typescript": "^5.5.4",
+    "typescript-eslint": "^8.59.3",
+    "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^2.0.29"
   },
   "build": {

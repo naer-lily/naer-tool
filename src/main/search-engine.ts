@@ -193,7 +193,7 @@ class SearchEngine {
     const ctx: CommandContext = {
       input,
       toast: showToast,
-      showForm: (config) => formDialog.show(config),
+      showForm: async (config) => formDialog.show(config),
       openWebView: async (config) => {
         logger.trace('[SE] openWebView called hadWebView=%s', hadWebView)
         hadWebView = true
@@ -211,8 +211,8 @@ class SearchEngine {
         clear: () => clipboard.clear()
       },
       shell: {
-        openExternal: (url) => shell.openExternal(url),
-        openPath: (path) => shell.openPath(path),
+        openExternal: async (url) => shell.openExternal(url),
+        openPath: async (path) => shell.openPath(path),
         showItemInFolder: (path) => shell.showItemInFolder(path),
         beep: () => shell.beep()
       },
@@ -222,7 +222,7 @@ class SearchEngine {
 
     if (plugin.icon) {
       const original = ctx.openWebView
-      ctx.openWebView = (config) => {
+      ctx.openWebView = async (config) => {
         config.pluginIcon = resolveIcon(plugin.icon)
         return original(config)
       }

@@ -82,7 +82,7 @@ class WebViewManager {
   private closePromise: Promise<unknown> | null = null
   private lastMessage: unknown = undefined
 
-  open(config: WebViewConfig): Promise<unknown> {
+  async open(config: WebViewConfig): Promise<unknown> {
     const mainWin = windowStateMachine.browserWindow
     if (!mainWin) {
       logger.warn('[WVM] open: no main window')
@@ -108,14 +108,14 @@ class WebViewManager {
     if (config.html) {
       const b64 = Buffer.from(config.html, 'utf-8').toString('base64')
       const dataUrl = `data:text/html;charset=utf-8;base64,${b64}`
-      this.view.webContents.loadURL(dataUrl)
+      void this.view.webContents.loadURL(dataUrl)
       logger.trace('[WVM] loadURL data URI len=%d', b64.length)
     } else if (config.htmlPath) {
       const fileUrl = `file:///${config.htmlPath.replace(/\\/g, '/')}`
-      this.view.webContents.loadURL(fileUrl)
+      void this.view.webContents.loadURL(fileUrl)
       logger.trace('[WVM] loadURL file=%s', fileUrl)
     } else if (config.url) {
-      this.view.webContents.loadURL(config.url)
+      void this.view.webContents.loadURL(config.url)
       logger.trace('[WVM] loadURL url=%s', config.url)
     }
 

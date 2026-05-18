@@ -147,7 +147,7 @@ function createViewState() {
   function exitSubcommand(): void {
     if (!dispatch({ type: 'exit-subcommand' })) return
     query.value = ''
-    doSearch()
+    void doSearch()
   }
 
   function closeWebView(): void {
@@ -194,7 +194,7 @@ function createViewState() {
     if (state.value.id === 'subcommand') {
       exitSubcommand()
     } else {
-      doSearch()
+      void doSearch()
     }
   }
 
@@ -205,7 +205,7 @@ function createViewState() {
       query.value = ''
       results.value = []
       activeIndex.value = 0
-      doSearch()
+      void doSearch()
       return
     }
     if (s.id === 'subcommand') {
@@ -222,7 +222,7 @@ function createViewState() {
       query.value = ''
       results.value = []
       activeIndex.value = 0
-      doSearch()
+      void doSearch()
       return
     }
     if (s.id === 'subcommand') {
@@ -237,7 +237,7 @@ function createViewState() {
     }
     if (!dispatch({ type: 'focus-input' })) return
     query.value = ''
-    nextTick(async () => {
+    void nextTick(async () => {
       await doSearch()
       onReady?.()
     })
@@ -245,7 +245,7 @@ function createViewState() {
 
   function handleAutoActivate(pluginId: string, icon?: string): void {
     if (!dispatch({ type: 'auto-activate', pluginId, icon })) return
-    enterSubcommand(pluginId, icon)
+    void enterSubcommand(pluginId, icon)
   }
 
   function handleShowWebView(payload: { height: number; icon: string | null }): void {
@@ -258,7 +258,7 @@ function createViewState() {
   function handleWebViewReady(): void {
     logger.trace('[VS] handleWebViewReady state=%s', state.value.id)
     dispatch({ type: 'webview-ready' })
-    const input = document.querySelector('.search-input input') as HTMLInputElement | null
+    const input = document.querySelector<HTMLInputElement>('.search-input input')
     input?.focus()
   }
 

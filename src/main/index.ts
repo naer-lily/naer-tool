@@ -36,7 +36,7 @@ if (!gotTheLock) {
   })
 }
 
-app.whenReady().then(async () => {
+void app.whenReady().then(async () => {
   configManager.load()
   app.setLoginItemSettings({ openAtLogin: configManager.getLaunchAtStartup() })
   await registerBuiltinPlugins()

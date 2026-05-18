@@ -3,7 +3,6 @@ import type { FormConfig } from '@shared/plugin-api'
 
 function buildFormHtml(config: FormConfig): string {
   const fieldsHtml = config.fields.map(f => buildFieldHtml(f)).join('\n')
-  const height = 120 + config.fields.length * 48
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -141,9 +140,9 @@ function escapeAttr(s: string): string {
 }
 
 class FormDialogManager {
-  private pending = new Map<number, { resolve: (v: Record<string, unknown> | null) => void; window: BrowserWindow }>()
+  private readonly pending = new Map<number, { resolve: (v: Record<string, unknown> | null) => void; window: BrowserWindow }>()
 
-  show(config: FormConfig): Promise<Record<string, unknown> | null> {
+  async show(config: FormConfig): Promise<Record<string, unknown> | null> {
     const width = config.width || 400
     const fieldCount = config.fields.length
     const height = 130 + fieldCount * 48
@@ -177,7 +176,7 @@ class FormDialogManager {
         }
       })
 
-      formWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildFormHtml(config))}`)
+      void formWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildFormHtml(config))}`)
     })
   }
 

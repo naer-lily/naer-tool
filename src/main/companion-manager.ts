@@ -11,7 +11,7 @@ interface ManagedCompanion {
   handle: CompanionHandle
 }
 
-function findFreePort(): Promise<number> {
+async function findFreePort(): Promise<number> {
   return new Promise((resolve) => {
     const server = createServer()
     server.listen(0, '127.0.0.1', () => {
@@ -38,8 +38,8 @@ async function waitForHealth(url: string, timeoutMs: number): Promise<boolean> {
 }
 
 class CompanionManager {
-  private companions = new Map<string, ManagedCompanion>()
-  private messageBuffers = new Map<string, Array<(data: unknown) => void>>()
+  private readonly companions = new Map<string, ManagedCompanion>()
+  private readonly messageBuffers = new Map<string, ((data: unknown) => void)[]>()
 
   async startForPlugin(pluginId: string, configs: CompanionConfig[]): Promise<CompanionHandle[]> {
     const handles: CompanionHandle[] = []
@@ -84,11 +84,11 @@ class CompanionManager {
       stdio: ['pipe', 'pipe', 'pipe']
     })
 
-    const listeners: Array<(data: unknown) => void> = []
+    const listeners: ((data: unknown) => void)[] = []
     this.messageBuffers.set(key, listeners)
 
     if (!isHttp) {
-      const rl = createInterface({ input: cp.stdout!, crlfDelay: Infinity })
+      const rl = createInterface({ input: cp.stdout, crlfDelay: Infinity })
       rl.on('line', (line) => {
         try {
           const data = JSON.parse(line.trim())
@@ -171,7 +171,7 @@ class CompanionManager {
 
   getHandlesForPlugin(pluginId: string): CompanionHandle[] {
     const handles: CompanionHandle[] = []
-    for (const [key, mc] of this.companions) {
+    for (const [, mc] of this.companions) {
       if (mc.pluginId === pluginId) {
         handles.push(mc.handle)
       }
@@ -180,7 +180,7 @@ class CompanionManager {
   }
 
   stopAll(): void {
-    for (const [key, mc] of this.companions) {
+    for (const [, mc] of this.companions) {
       mc.handle.kill()
     }
     this.companions.clear()

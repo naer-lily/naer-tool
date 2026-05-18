@@ -3,11 +3,11 @@ import { IPC } from '@shared/ipc-channels'
 import type { SearchResponse } from '@shared/plugin-api'
 
 const api = {
-  search: (text: string, pluginId?: string): Promise<SearchResponse> => {
+  search: async (text: string, pluginId?: string): Promise<SearchResponse> => {
     return ipcRenderer.invoke(IPC.SEARCH, { text, pluginId })
   },
 
-  execute: (pluginId: string, commandId: string, input: string): Promise<{ webViewOpened: boolean; shouldClose: boolean }> => {
+  execute: async (pluginId: string, commandId: string, input: string): Promise<{ webViewOpened: boolean; shouldClose: boolean }> => {
     return ipcRenderer.invoke(IPC.EXECUTE, { pluginId, commandId, input })
   },
 
