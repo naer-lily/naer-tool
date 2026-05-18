@@ -92,10 +92,6 @@ class WebViewManager {
     this.view.webContents.on('dom-ready', () => {
       const height = config.height || 450
       this.setExpandedHeight(height)
-      this.view!.webContents.insertCSS(`
-        html { background: transparent !important; height: 100% !important; margin: 0 !important; }
-        body { border-radius: 0 0 12px 12px !important; overflow: hidden !important; margin: 0 !important; }
-      `)
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
