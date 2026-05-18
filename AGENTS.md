@@ -10,19 +10,21 @@
 ## Directory Architecture
 ```
 src/main/        Electron main process — NO DOM access
-  index.ts          Entry: app lifecycle, builtin plugin registration, shortcut
-  window-manager.ts Search window (create/show/hide/toggle/auto-activate)
+  index.ts          Entry: app lifecycle, builtin plugin registration, shortcut, config bootstrap
+  window-manager.ts Search window (create/show/hide/toggle/auto-activate), off-screen hide pattern
   search-engine.ts  Search dispatch (prefix/subcommand/fallback/home)
-  plugin-host.ts    Plugin lifecycle (load/unload/reload)
+  plugin-host.ts    Plugin lifecycle (load/unload/reload/loadFromPath)
   prefix-registry.ts Prefix → pluginId mapping
-  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/CLOSE)
+  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/FORM_SUBMIT/WebView)
   toast.ts          Screen-bottom toast via data-URL BrowserWindow
   tray.ts           System tray icon + context menu
-  web-view-manager.ts WebContentsView lifecycle (open/close/resize/input-forward)
+  web-view-manager.ts WebContentsView lifecycle (open/close/resize/input-forward), preload building
+  form-dialog.ts    Form dialog (frameless BrowserWindow, custom title bar, CSS drag region)
+  config.ts         ~/.futari/config.json manager (load/save/plugin path persistence)
   logger.ts         Main process logger (electron-log)
   plugins/
     builtins/       Built-in plugins (hello, calculator, run, reload, plugin-creator)
-src/preload/     contextBridge — exposes typed API to renderer
+src/preload/     contextBridge — exposes typed futariAPI to renderer
 src/renderer/    Vue 3 SPA — NO Node.js access
   src/
     App.vue           Root component (search container, webview placeholder, toast)
@@ -157,11 +159,13 @@ interface WebViewConfig {
 - SVGs are rendered via `v-html`; recommended size 18×18px, use `fill="currentColor"` for theme compatibility
 
 ### Loading
-- Built-in plugins live in `src/main/plugins/builtins/`, imported at startup
-- User plugins are `.js` CommonJS modules loaded via `require()` from arbitrary paths listed in config
-- Plugin-creator (`创建插件`) scaffolds new user plugins with `index.js` + `index.d.ts` + `package.json`
-- **NO automatic hot-reload** — a fallback command "Reload Plugins" manually re-`require()`s from disk
-- User plugin config persistence: **NOT YET IMPLEMENTED** — config file, plugin path loading, and auto-registration are pending
+- Built-in plugins live in `src/main/plugins/builtins/`, imported at startup via `registerBuiltin()`
+- User plugins are `.js` CommonJS modules loaded via `require()` from paths listed in `~/.futari/config.json`
+- Config file `~/.futari/config.json` stores: `shortcut`, `theme`, `plugins` (array of paths)
+- `configManager.getPlugins()` reads paths; `pluginHost.loadFromPath(path)` requires and registers
+- Plugin-creator (`创建插件`) scaffolds new user plugins and auto-adds to config + loads immediately
+- Reload command re-reads config and re-`require()`s all user plugins from stored paths
+- `pluginHost.loadFromPath(path)`: resolves path, `delete require.cache`, requires module, calls `onActivate`, registers in map. Conflicts: unloads existing plugin with same ID first.
 
 ### Interface (defined in `src/shared/plugin-api.ts`)
 - `IPlugin.prefix` — registers in PrefixRegistry; user types `prefix ` to enter subcommand mode
@@ -170,6 +174,8 @@ interface WebViewConfig {
 - `ICommand.execute(ctx)` — called only when user selects the command; can be async; can `await ctx.openWebView()`
 - `IFallbackCommand` — for main-mode matching (no prefix needed)
 - `IPlugin.shouldAutoActivate?(appInfo)` — check foreground window on launcher show to auto-enter subcommand
+- `CommandContext.clipboard` — `writeText/readText/writeHTML/readHTML/clear` wrappers over `electron.clipboard`
+- `CommandContext.shell` — `openExternal/openPath/showItemInFolder/beep` wrappers over `electron.shell`
 
 ### Reload
 - `delete require.cache[pluginPath]` → re-`require()` → `onDeactivate()` old → `onActivate()` new
@@ -229,12 +235,33 @@ Renderer input → IPC("search", text)
 - Backspace-to-empty while WebView active → close WebView
 
 ## Window Behavior
-- Search window: frameless, transparent, always-on-top, centered at top of screen (680×400 default)
-- WebView mode: window expands to 680×(64+height); WCV at y=64, height=height-16 (bottom shadow gap)
-- Container (Vue): 648px wide, x=16 margin each side; in webview mode: background→transparent, border-bottom→none
+
+### Search window — frameless, transparent, always-on-top
+- Frameless (`frame: false`), transparent (`transparent: true`), always-on-top (`alwaysOnTop: true, 'screen-saver'`)
+- Centered at top of screen: `centerAtTop()` positions at screen center X, 12% from top Y
+- Default size: 680×400; WebView mode expands to 680×(64+height)
+- Container (Vue): 648px wide, x=16 margin each side
 - `BOTTOM_SHADOW_SPACE=16`: WCV reduced by 16px so container box-shadow renders in the gap
-- Global shortcut: `Alt+Space` (configurable)
-- Plugin-created windows use Electron `BrowserWindow` via `WindowManager`
+- Global shortcut: `Alt+Space` (configurable in `~/.futari/config.json`)
+
+### Off-screen hide pattern (CRITICAL — DO NOT CHANGE)
+**Why**: The main window is `alwaysOnTop: true, 'screen-saver'` + `transparent: true` = `WS_EX_LAYERED`. Even with `setOpacity(0)` + `setIgnoreMouseEvents(true)`, its HWND remains in the DWM Z-order. DWM composites through this layered window for every mouse hit-test on sibling windows in the same process (Form dialog, DevTools), causing cursor flicker and drag jitter.
+
+**Solution**: NEVER call `win.hide()` (causes Windows show/hide animation flash). Instead:
+```
+hideWindow(): setOpacity(0) → setIgnoreMouseEvents(true, {forward:true}) → setPosition(-9999, -9999)
+showWindow(): centerAtTop() → setOpacity(0) → setIgnoreMouseEvents(false) → show() → focus() → setImmediate(() => setOpacity(1))
+```
+- Window is always "shown" (never hidden), just moved off-screen when not needed
+- DWM ignores windows whose rectangles don't overlap the visible desktop — no composition interference
+- `setOpacity` handles the fade-in/out; no native animation flash
+
+### Form dialog — frameless, opaque, custom title bar
+- `frame: false, transparent: false, backgroundColor: '#202020'`
+- Custom title bar with CSS `-webkit-app-region: drag` / `-webkit-app-region: no-drag`
+- Field types: `input`, `number`, `select`, `checkbox`, `radio`, `switch`, `textarea`, `file`
+- Height formula: `130 + fieldCount * 48` (includes 36px title bar)
+- `nodeIntegration: true, contextIsolation: false` — form JS directly uses `require('electron')`
 
 ## Logging
 - **Main process** (`src/main/logger.ts`): `electron-log` v5 → file (`%APPDATA%/futari/logs/main.log`) + console
