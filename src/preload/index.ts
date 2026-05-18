@@ -55,8 +55,8 @@ const api = {
     }
   },
 
-  onShowWebView: (cb: (payload: { height: number }) => void): (() => void) => {
-    const handler = (_e: Electron.IpcRendererEvent, payload: { height: number }) => cb(payload)
+  onShowWebView: (cb: (payload: { height: number; icon: string | null }) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, payload: { height: number; icon: string | null }) => cb(payload)
     ipcRenderer.on(IPC.SHOW_WEB_VIEW, handler)
     return () => {
       ipcRenderer.removeListener(IPC.SHOW_WEB_VIEW, handler)

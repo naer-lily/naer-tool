@@ -10,7 +10,7 @@ export interface FutariAPI {
   onToast(cb: (message: string) => void): () => void
   onToggleTheme(cb: () => void): () => void
   onAutoActivate(cb: (pluginId: string, icon?: string) => void): () => void
-  onShowWebView(cb: (payload: { height: number }) => void): () => void
+  onShowWebView(cb: (payload: { height: number; icon: string | null }) => void): () => void
   onHideWebView(cb: () => void): () => void
   onWebViewReady(cb: () => void): () => void
 }

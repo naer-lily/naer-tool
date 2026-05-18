@@ -186,6 +186,14 @@ class SearchEngine {
       openWebView: (config) => webViewManager.open(config),
       closeWebView: () => webViewManager.close()
     }
+
+    if (plugin.icon) {
+      const original = ctx.openWebView
+      ctx.openWebView = (config) => {
+        config.pluginIcon = resolveIcon(plugin.icon)
+        return original(config)
+      }
+    }
     const cmd = await this.resolveCommand(plugin, commandId, input)
     if (cmd) {
       await cmd.execute(ctx)

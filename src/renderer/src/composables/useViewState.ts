@@ -231,10 +231,9 @@ function createViewState() {
     enterSubcommand(pluginId, icon)
   }
 
-  function handleShowWebView(payload: { height: number }): void {
-    const currentIcon = state.value.id === 'subcommand' ? state.value.icon : null
-    logger.trace('[VS] handleShowWebView currentState=%s capturedIcon=%s height=%d', state.value.id, currentIcon, payload.height)
-    dispatch({ type: 'open-webview', height: payload.height, icon: currentIcon })
+  function handleShowWebView(payload: { height: number; icon: string | null }): void {
+    logger.trace('[VS] handleShowWebView icon=%s height=%d', payload.icon, payload.height)
+    dispatch({ type: 'open-webview', height: payload.height, icon: payload.icon })
     results.value = []
     activeIndex.value = 0
   }

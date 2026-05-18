@@ -130,11 +130,11 @@ class WebViewManager {
       }
       const height = config.height || 450
       this.setExpandedHeight(height)
-      mainWin.webContents.send('show-web-view', { height })
+      mainWin.webContents.send('show-web-view', { height, icon: config.pluginIcon || null })
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
-      logger.trace('[WVM] sent show-web-view(%d) + web-view-ready', height)
+      logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', height, config.pluginIcon || null)
     })
 
     return this.closePromise

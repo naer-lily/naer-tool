@@ -5,4 +5,5 @@ export interface WebViewConfig {
   preload?: string
   height?: number
   injectBaseStyles?: boolean
+  pluginIcon?: string
 }

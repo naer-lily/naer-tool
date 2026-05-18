@@ -12,6 +12,8 @@ Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.
 - **Auto-activate** — detects foreground app and auto-enters matching plugin's subcommand
 - **Home screen** — shows available plugins and global commands on empty input; filterable by typing
 - **Keyboard navigation** — `Ctrl+J`/`↓` next, `Ctrl+K`/`↑` prev, `Alt+1-9` direct pick, `Esc` back/close
+- **WebView** — plugins can open embedded web content (inline HTML or local file) below the search bar, with real-time input forwarding, optional base style injection, and Promise-based await-on-close
+- **Form dialog** — plugins show multi-field input forms (`input`, `number`, `select`, `checkbox`, `radio`, `switch`, `textarea`, `file`)
 - **System tray** — tray icon with show/hide, theme toggle, quit
 - **Theme** — light/dark with acrylic backdrop effect; toggle via tray menu
 - **Toast** — plugins call `ctx.toast(message)`; rendered as screen-bottom floating message
@@ -22,8 +24,8 @@ Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.
 |--------|--------|-------------|
 | Calculator | `=` | Evaluate math expressions safely |
 | RunCommand | `>` | Execute system commands with timeout |
-| Hello | `hi` | Demo plugin: greet/say goodbye |
-| Plugin Creator | — | Fallback: scaffold new user plugins (match `创建插件`) |
+| Hello | `hi` | Demo plugin: greet, WebView tests, multi-file dev demo |
+| Plugin Creator | — | Fallback: scaffold new user plugins (`index.js` + `index.d.ts` + `package.json`) |
 | Reload | — | Fallback: reload all user plugins (match `reload` / `重载`) |
 
 ## Dev
@@ -50,13 +52,17 @@ src/main/          Electron main process
   search-engine.ts   Search dispatch (prefix/subcommand/fallback/home)
   plugin-host.ts     Plugin lifecycle (load/unload/reload)
   prefix-registry.ts Prefix → pluginId mapping
-  ipc-handlers.ts    SEARCH/EXECUTE/CLOSE handlers
+  ipc-handlers.ts    SEARCH/EXECUTE/CLOSE/WebView handlers
   toast.ts           Bottom-screen floating message
   tray.ts            System tray icon + menu
+  web-view-manager.ts WebContentsView lifecycle (open/close/resize)
   plugins/builtins/  Built-in plugins
 src/preload/       contextBridge — typed IPC API exposed to renderer
-src/renderer/      Vue 3 SPA — search UI, keyboard nav, theme
+src/renderer/      Vue 3 SPA — search UI, keyboard nav, state machine, theme
 src/shared/        Types and constants (both main + renderer)
+resources/         web-view-preload.js (builtin WebView preload)
+types/             futari-plugin-types local npm package
+docs/              plugin-development.md tutorial
 ```
 
 ## Plugin API
@@ -67,9 +73,12 @@ Plugins implement `IPlugin` (see `src/shared/plugin-api.ts`):
 - `buildCommands()` — returns commands to match against sub-input; called on every keystroke
 - `getFallbackCommands()` — returns commands for main-mode matching (no prefix needed)
 - `shouldAutoActivate(appInfo)` — return `true` to auto-enter subcommand when matching app is focused
-- `ctx.toast(message)` — call from `execute()` to show a screen-bottom toast; silent otherwise
+- `ctx.toast(message)` — show a screen-bottom toast
+- `ctx.showForm(config)` → `Promise` — open a form dialog, returns field values or `null`
+- `ctx.openWebView(config)` → `Promise` — open embedded WebView, resolves on close with optional data
+- `ctx.closeWebView()` — close the active WebView
 
-User plugins are **`.js` CommonJS modules** loaded via `require()`. Use the built-in Plugin Creator (prefix `插件`) to scaffold a new plugin with `index.js` + `index.d.ts` type declarations.
+User plugins are **`.js` CommonJS modules** loaded via `require()`. Use the built-in Plugin Creator to scaffold a new plugin. See `docs/plugin-development.md` for the full tutorial.
 
 ## License
 

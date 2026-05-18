@@ -23,6 +23,7 @@ declare namespace Futari {
     preload?: string
     height?: number
     injectBaseStyles?: boolean
+    pluginIcon?: string
   }
 
   interface FormField {
