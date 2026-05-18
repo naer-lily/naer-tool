@@ -13,7 +13,7 @@ const WIN_WIDTH = 680
 const CONTAINER_WIDTH = 648
 const CONTAINER_X = Math.round((WIN_WIDTH - CONTAINER_WIDTH) / 2)
 const SEARCH_HEIGHT = 64
-const BOTTOM_SHADOW_SPACE = 24
+const BOTTOM_SHADOW_SPACE = 16
 
 let tempPreloadPath: string | null = null
 
@@ -76,7 +76,6 @@ class WebViewManager {
 
     this.view = getWebView(config)
     this.view.setBackgroundColor('#00000000')
-    this.view.setBorderRadius(12)
 
     mainWin.contentView.addChildView(this.view)
 
@@ -93,6 +92,10 @@ class WebViewManager {
     this.view.webContents.on('dom-ready', () => {
       const height = config.height || 450
       this.setExpandedHeight(height)
+      this.view!.webContents.insertCSS(`
+        html { background: transparent !important; height: 100% !important; margin: 0 !important; }
+        body { border-radius: 0 0 12px 12px !important; overflow: hidden !important; margin: 0 !important; }
+      `)
       mainWin.webContents.send('web-view-ready')
       mainWin.focus()
       mainWin.webContents.focus()
