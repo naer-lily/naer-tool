@@ -2,12 +2,13 @@ import { app } from 'electron'
 import { get } from 'https'
 import { createWriteStream, mkdirSync, writeFileSync } from 'fs'
 import { join, dirname } from 'path'
-import { tmpdir } from 'os'
+import { tmpdir, homedir } from 'os'
 import { execFile, spawn } from 'child_process'
 import { logger } from '@main/logger'
 
 const REPO = 'naer-lily/futari'
 const API_LATEST = `https://api.github.com/repos/${REPO}/releases/latest`
+const UPDATE_LOG = join(homedir(), '.futari', 'logs', 'updater.log')
 
 export interface UpdateInfo {
   available: boolean
@@ -71,6 +72,7 @@ interface CachedUpdate extends UpdateInfo {
 
 class AutoUpdaterManager {
   private cached: CachedUpdate | null = null
+  private updating = false
 
   getStatus(): UpdateInfo {
     if (this.cached) return { available: this.cached.available, currentVersion: this.cached.currentVersion, latestVersion: this.cached.latestVersion }
@@ -78,6 +80,11 @@ class AutoUpdaterManager {
   }
 
   async checkForUpdates(): Promise<UpdateInfo> {
+    if (this.updating) {
+      logger.warn('[Updater] check blocked: update already in progress')
+      return { available: false, currentVersion: app.getVersion() }
+    }
+
     const currentVersion = app.getVersion()
     logger.info('[Updater] checking for updates, current=%s', currentVersion)
     try {
@@ -105,65 +112,114 @@ class AutoUpdaterManager {
   }
 
   async downloadAndInstall(onToast?: (msg: string) => void): Promise<void> {
+    if (this.updating) {
+      throw new Error('更新已在进行中')
+    }
+
     const downloadUrl = this.cached?._downloadUrl
     if (!downloadUrl) {
       throw new Error('没有找到下载地址，请手动下载更新')
     }
 
-    const tmpDir = join(tmpdir(), `futari-update-${Date.now()}`)
-    mkdirSync(tmpDir, { recursive: true })
-    const zipPath = join(tmpDir, 'update.zip')
-    const extractDir = join(tmpDir, 'extracted')
+    this.updating = true
 
-    logger.info('[Updater] downloading %s', downloadUrl)
-    onToast?.('正在下载更新...')
+    try {
+      const tmpDir = join(tmpdir(), `futari-update-${Date.now()}`)
+      mkdirSync(tmpDir, { recursive: true })
+      const zipPath = join(tmpDir, 'update.zip')
+      const extractDir = join(tmpDir, 'extracted')
 
-    await downloadFile(downloadUrl, zipPath)
+      logger.info('[Updater] downloading %s', downloadUrl)
+      onToast?.('正在下载更新...')
 
-    logger.info('[Updater] extracting')
-    onToast?.('正在安装，Futari 即将重启...')
+      await downloadFile(downloadUrl, zipPath)
 
-    await new Promise<void>((resolve, reject) => {
-      execFile('powershell', [
-        '-NoProfile', '-Command',
-        `Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force`
-      ], (err) => { if (err) reject(err); else resolve() })
-    })
+      logger.info('[Updater] extracting')
+      onToast?.('正在安装，Futari 即将重启...')
 
-    const exePath = app.getPath('exe')
-    const appDir = dirname(exePath)
+      await new Promise<void>((resolve, reject) => {
+        execFile('powershell', [
+          '-NoProfile', '-Command',
+          `Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force`
+        ], (err) => { if (err) reject(err); else resolve() })
+      })
 
-    const scriptPath = join(tmpDir, 'updater.ps1')
-    const script = `\
-param([string]$OldDir,[string]$NewDir,[string]$Exe,[int]$Pid)
-Start-Sleep 3
-try{Wait-Process -Id $Pid -ErrorAction SilentlyContinue}catch{}
-Start-Sleep 1
-$srcDir=$NewDir
-$found=Get-ChildItem -Path $NewDir -Recurse -Filter 'Futari.exe'|Select-Object -First 1
-if($found){$srcDir=Split-Path $found.FullName -Parent}
-Get-ChildItem -Path "$srcDir\\*" -Recurse|ForEach-Object{
-  $rel=$_.FullName.Substring($srcDir.Length+1)
-  $dst=Join-Path $OldDir $rel
-  $pd=Split-Path $dst -Parent
-  if(!(Test-Path $pd)){New-Item -ItemType Directory -Path $pd -Force|Out-Null}
-  Copy-Item $_.FullName $dst -Force
+      const exePath = app.getPath('exe')
+      const appDir = dirname(exePath)
+
+      const scriptPath = join(tmpDir, 'updater.ps1')
+      const script = `\
+param([string]$OldDir,[string]$NewDir,[string]$Exe,[string]$LogFile,[int]$Pid)
+
+function Log($msg) {
+  $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
+  "$ts $msg" | Out-File -FilePath $LogFile -Append -Encoding utf8
 }
-Remove-Item (Split-Path $NewDir -Parent) -Recurse -Force
-Start-Process $Exe`
-    writeFileSync(scriptPath, script, 'utf-8')
-    logger.info('[Updater] launching updater script, appDir=%s', appDir)
 
-    spawn('powershell', [
-      '-NoProfile', '-WindowStyle', 'Hidden',
-      '-File', scriptPath,
-      '-OldDir', appDir,
-      '-NewDir', extractDir,
-      '-Exe', exePath,
-      '-Pid', String(process.pid)
-    ], { detached: true, stdio: 'ignore' }).unref()
+Log "Updater started OldDir=$OldDir NewDir=$NewDir Exe=$Exe Pid=$Pid"
+Start-Sleep 3
+try { Wait-Process -Id $Pid -ErrorAction SilentlyContinue } catch {
+  Log "Wait-Process error: $_"
+}
+Start-Sleep 1
 
-    setImmediate(() => app.quit())
+$srcDir = $NewDir
+$found = Get-ChildItem -Path $NewDir -Recurse -Filter 'Futari.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($found) {
+  $srcDir = Split-Path $found.FullName -Parent
+  Log "Found Futari.exe at $($found.FullName), srcDir=$srcDir"
+} else {
+  Log "ERROR: Futari.exe not found in $NewDir"
+  exit 1
+}
+
+Get-ChildItem -Path "$srcDir\\*" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+  $rel = $_.FullName.Substring($srcDir.Length + 1)
+  $dst = Join-Path $OldDir $rel
+  $pd = Split-Path $dst -Parent
+  if (!(Test-Path $pd)) {
+    try { New-Item -ItemType Directory -Path $pd -Force | Out-Null } catch {
+      Log "ERROR: mkdir $pd : $_"
+    }
+  }
+  try {
+    Copy-Item $_.FullName $dst -Force -ErrorAction Stop
+  } catch {
+    Log "ERROR: copy $($_.FullName) -> $dst : $_"
+  }
+}
+
+Log "Copy complete, removing temp $((Split-Path $NewDir -Parent))"
+try { Remove-Item (Split-Path $NewDir -Parent) -Recurse -Force -ErrorAction Stop } catch {
+  Log "WARN: remove temp failed: $_"
+}
+
+Log "Starting $Exe"
+try {
+  Start-Process $Exe
+  Log "Start-Process succeeded"
+} catch {
+  Log "ERROR: Start-Process $Exe failed: $_"
+}
+Log "Updater exiting"`
+      writeFileSync(scriptPath, script, 'utf-8')
+      logger.info('[Updater] launching updater script, appDir=%s log=%s', appDir, UPDATE_LOG)
+
+      spawn('powershell', [
+        '-NoProfile', '-WindowStyle', 'Hidden',
+        '-File', scriptPath,
+        '-OldDir', appDir,
+        '-NewDir', extractDir,
+        '-Exe', exePath,
+        '-LogFile', UPDATE_LOG,
+        '-Pid', String(process.pid)
+      ], { detached: true, stdio: 'ignore' }).unref()
+
+      setImmediate(() => app.quit())
+    } catch (e) {
+      this.updating = false
+      throw e
+    }
   }
 }
 

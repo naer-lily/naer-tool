@@ -47,7 +47,11 @@ function rebuildMenu(): void {
   tray.setContextMenu(Menu.buildFromTemplate(template))
 }
 
+let updateInProgress = false
+
 async function handleUpdateClick(): Promise<void> {
+  if (updateInProgress) return
+
   if (updateVersion) {
     const { response } = await dialog.showMessageBox({
       type: 'info',
@@ -59,15 +63,18 @@ async function handleUpdateClick(): Promise<void> {
       cancelId: 1
     })
     if (response !== 0) return
+    updateInProgress = true
     try {
       await autoUpdater.downloadAndInstall((msg) => showScreenToast(msg))
     } catch (e) {
       logger.error('[Tray] update install failed:', e)
       showScreenToast('更新失败，请稍后重试')
+      updateInProgress = false
     }
     return
   }
 
+  if (updateInProgress) return
   showScreenToast('正在检查更新...')
   const info = await autoUpdater.checkForUpdates()
   if (info.available && info.latestVersion) {
@@ -85,11 +92,13 @@ async function handleUpdateClick(): Promise<void> {
       cancelId: 1
     })
     if (response === 0) {
+      updateInProgress = true
       try {
         await autoUpdater.downloadAndInstall((msg) => showScreenToast(msg))
       } catch (e) {
         logger.error('[Tray] update install failed:', e)
         showScreenToast('更新失败，请稍后重试')
+        updateInProgress = false
       }
     }
   } else {
