@@ -22,8 +22,8 @@ async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(settingsPlugin, 'settings')
 }
 
-function loadUserPlugins(): void {
-  pluginHost.scanAndLoadUserPlugins()
+async function loadUserPlugins(): Promise<void> {
+  await pluginHost.scanAndLoadUserPlugins()
 }
 
 const gotTheLock = app.requestSingleInstanceLock()
@@ -40,7 +40,7 @@ app.whenReady().then(async () => {
   configManager.load()
   app.setLoginItemSettings({ openAtLogin: configManager.getLaunchAtStartup() })
   await registerBuiltinPlugins()
-  loadUserPlugins()
+  await loadUserPlugins()
   prefixRegistry.rebuild()
   createToastWindow()
   createWindow()

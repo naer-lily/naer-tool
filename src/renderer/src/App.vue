@@ -28,7 +28,7 @@
     <ResultList v-else
       :items="results"
       :active-index="activeIndex"
-      @select="selectResult"
+      @select="onSelect"
       @update:active-index="activeIndex = $event"
     />
 
@@ -62,6 +62,11 @@ const { onKeydown: navKeydown } = useKeyboardNav({
   onSelect: selectResult,
   onEscape: handleEscape
 })
+
+async function onSelect(index: number): Promise<void> {
+  await selectResult(index)
+  nextTick(() => searchInputRef.value?.focusInput())
+}
 
 function onInput(): void {
   doSearch()
