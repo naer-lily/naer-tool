@@ -1,12 +1,13 @@
 import { app, BrowserWindow, globalShortcut } from 'electron'
 import { createWindow, toggleWindow, showWindow } from '@main/window-manager'
-import { createToastWindow, destroyToastWindow } from '@main/toast'
-import { createTray, destroyTray } from '@main/tray'
+import { createToastWindow, destroyToastWindow, showScreenToast } from '@main/toast'
+import { createTray, destroyTray, setUpdateAvailable } from '@main/tray'
 import { registerIpc } from '@main/ipc-handlers'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { configManager } from '@main/config'
 import { logger } from '@main/logger'
+import { autoUpdater } from '@main/auto-updater'
 import { companionManager } from '@main/companion-manager'
 import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
@@ -53,6 +54,22 @@ void app.whenReady().then(async () => {
   })
 
   registerIpc()
+
+  const skipVersion = configManager.getRaw().skipVersion
+  const lastCheck = configManager.getRaw().lastUpdateCheck || 0
+  const ONE_DAY = 24 * 60 * 60 * 1000
+  if (Date.now() - lastCheck > ONE_DAY) {
+    setTimeout(() => {
+      void (async () => {
+        configManager.patch({ lastUpdateCheck: Date.now() })
+        const info = await autoUpdater.checkForUpdates()
+        if (info.available && info.latestVersion && info.latestVersion !== skipVersion) {
+          setUpdateAvailable(info.latestVersion)
+          showScreenToast(`Futari ${info.latestVersion} 可用，右键托盘图标更新`)
+        }
+      })()
+    }, 5000)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

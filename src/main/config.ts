@@ -8,6 +8,8 @@ export interface FutariConfig {
   shortcut?: string
   theme?: 'light' | 'dark'
   launchAtStartup?: boolean
+  lastUpdateCheck?: number
+  skipVersion?: string
 }
 
 const CONFIG_DIR = join(homedir(), '.futari')
