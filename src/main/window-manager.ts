@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import activeWin from 'active-win'
 import { pluginHost } from '@main/plugin-host'
+import { logger } from '@main/logger'
 import type { AppInfo } from '@shared/plugin-api'
 
 const WIN_WIDTH = 680
@@ -56,11 +57,13 @@ function centerAtTop(): void {
 
 export function showWindow(): void {
   if (!mainWindow) return
+  logger.trace('[WM] showWindow called isActive=%s', isActive)
   isActive = true
   centerAtTop()
 
   const activated = checkAutoActivate()
   if (activated) {
+    logger.trace('[WM] auto-activate plugin=%s', activated.pluginId)
     mainWindow.webContents.send('auto-activate', activated.pluginId, activated.icon)
   }
 

@@ -26,6 +26,7 @@ function createViewState() {
   const results = ref<SearchResult[]>([])
   const activeIndex = ref(0)
   const toast = ref('')
+  const executingCommand = ref(false)
 
   const mode = computed<'main' | 'subcommand'>(() =>
     state.value.id === 'subcommand' ? 'subcommand' : 'main'
@@ -169,7 +170,9 @@ function createViewState() {
 
     const pluginId = activePluginId.value || item.pluginId
     logger.trace('[VS] selectResult idx=%d cmd=%s plugin=%s', index, item.id, pluginId)
+    executingCommand.value = true
     const result = await window.futariAPI.execute(pluginId, item.id, query.value)
+    executingCommand.value = false
 
     logger.trace('[VS] selectResult execute returned webViewOpened=%s state=%s', result.webViewOpened, state.value.id)
     if (result.webViewOpened) return
@@ -214,6 +217,10 @@ function createViewState() {
   }
 
   function handleFocusInput(): void {
+    if (executingCommand.value) {
+      logger.trace('[VS] handleFocusInput ignored: command execution in progress')
+      return
+    }
     if (!dispatch({ type: 'focus-input' })) return
     query.value = ''
     nextTick(() => doSearch())
