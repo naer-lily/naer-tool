@@ -2,7 +2,7 @@ import { WebContentsView, app } from 'electron'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { getMainWindow, markResizeTime, setShouldHideOnBlur } from '@main/window-manager'
+import { windowStateMachine } from '@main/window-state-machine'
 import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
@@ -81,10 +81,9 @@ class WebViewManager {
   private closeResolver: ((data: unknown) => void) | null = null
   private closePromise: Promise<unknown> | null = null
   private lastMessage: unknown = undefined
-  private opening = false
 
   open(config: WebViewConfig): Promise<unknown> {
-    const mainWin = getMainWindow()
+    const mainWin = windowStateMachine.browserWindow
     if (!mainWin) {
       logger.warn('[WVM] open: no main window')
       return Promise.resolve(undefined)
@@ -99,8 +98,7 @@ class WebViewManager {
 
     if (this.view) this.close()
 
-    setShouldHideOnBlur(false)
-    this.opening = true
+    windowStateMachine.beginWebView()
     this.view = getWebView(config)
     this.view.setBackgroundColor('#00000000')
 
@@ -129,19 +127,29 @@ class WebViewManager {
 
     this.view.webContents.on('dom-ready', () => {
       logger.trace('[WVM] dom-ready fired')
-      this.opening = false
-      setShouldHideOnBlur(true)
       if (config.injectBaseStyles) {
         this.view!.webContents.insertCSS(BASE_CSS).catch((e: Error) => logger.warn('[WVM] insertCSS failed:', e.message))
       }
       const height = config.height || 450
-      this.setExpandedHeight(height)
-      mainWin.webContents.send('show-web-view', { height, icon: config.pluginIcon || null })
-      mainWin.webContents.send('web-view-ready')
-      logger.trace('[WVM] about to focus mainWin, isFocused=%s', mainWin.isFocused())
+
+      windowStateMachine.webViewReady(height)
+
+      if (this.view) {
+        this.view.setBounds({
+          x: CONTAINER_X,
+          y: SEARCH_HEIGHT,
+          width: CONTAINER_WIDTH,
+          height: height - BOTTOM_SHADOW_SPACE
+        })
+      }
+
+      const wc = windowStateMachine.webContents
+      wc?.send('show-web-view', { height, icon: config.pluginIcon || null })
+      wc?.send('web-view-ready')
+      logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', height, config.pluginIcon || null)
+
       mainWin.focus()
       mainWin.webContents.focus()
-      logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', height, config.pluginIcon || null)
     })
 
     logger.trace('[WVM] returning closePromise')
@@ -150,10 +158,9 @@ class WebViewManager {
 
   close(webViewData?: unknown): void {
     logger.trace('[WVM] close called data=%o', webViewData)
-    const mainWin = getMainWindow()
 
-    setShouldHideOnBlur(true)
-    this.opening = false
+    windowStateMachine.endWebView()
+    const mainWin = windowStateMachine.browserWindow
     const resolveData = webViewData !== undefined ? webViewData : this.lastMessage
 
     if (this.view) {
@@ -162,7 +169,6 @@ class WebViewManager {
     }
 
     cleanupTempPreload()
-    this.restoreWindowSize()
 
     logger.trace('[WVM] resolving closePromise with data=%o hasResolver=%s', resolveData, !!this.closeResolver)
     if (this.closeResolver) {
@@ -171,7 +177,7 @@ class WebViewManager {
       this.closePromise = null
     }
 
-    mainWin?.webContents.send('hide-web-view')
+    windowStateMachine.webContents?.send('hide-web-view')
   }
 
   sendInput(text: string): void {
@@ -179,27 +185,7 @@ class WebViewManager {
   }
 
   handleResize(height: number): void {
-    this.setExpandedHeight(height)
-  }
-
-  handleMessage(data: unknown): void {
-    this.lastMessage = data
-    const mainWin = getMainWindow()
-    mainWin?.webContents.send('web-view-message', data)
-  }
-
-  setExpandedHeight(height: number): void {
-    const mainWin = getMainWindow()
-    if (!mainWin) return
-
-    const totalHeight = SEARCH_HEIGHT + height
-    logger.trace('[WVM] setExpandedHeight h=%d total=%d, isFocused=%s', height, totalHeight, mainWin.isFocused())
-    markResizeTime()
-
-    mainWin.setResizable(true)
-    mainWin.setSize(WIN_WIDTH, totalHeight)
-    mainWin.setResizable(false)
-
+    windowStateMachine.resizeExpanded(SEARCH_HEIGHT + height)
     if (this.view) {
       this.view.setBounds({
         x: CONTAINER_X,
@@ -208,27 +194,15 @@ class WebViewManager {
         height: height - BOTTOM_SHADOW_SPACE
       })
     }
-    logger.trace('[WVM] setExpandedHeight done, isFocused=%s', mainWin.isFocused())
   }
 
-  restoreWindowSize(): void {
-    const mainWin = getMainWindow()
-    if (!mainWin) return
-
-    logger.trace('[WVM] restoreWindowSize, isFocused=%s', mainWin.isFocused())
-    markResizeTime()
-    mainWin.setResizable(true)
-    mainWin.setSize(WIN_WIDTH, 400)
-    mainWin.setResizable(false)
-    logger.trace('[WVM] restoreWindowSize done, isFocused=%s', mainWin.isFocused())
+  handleMessage(data: unknown): void {
+    this.lastMessage = data
+    windowStateMachine.webContents?.send('web-view-message', data)
   }
 
   get isActive(): boolean {
     return this.view !== null
-  }
-
-  get isOpening(): boolean {
-    return this.opening
   }
 }
 
