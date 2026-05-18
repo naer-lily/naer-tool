@@ -43,7 +43,9 @@ export interface CommandContext {
   }
 }
 
-export type CommandResult = void
+export type CommandResult = void | Promise<void>
+
+export type CommandOutcome = 'close' | 'home'
 
 export interface ICommand {
   id: string
@@ -51,7 +53,7 @@ export interface ICommand {
   icon?: string
 
   match(input: string): CommandMatch | null
-  execute(ctx: CommandContext): void | Promise<void>
+  execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
 }
 
 export interface IFallbackCommand {

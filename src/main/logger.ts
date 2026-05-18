@@ -1,5 +1,14 @@
+import { homedir } from 'os'
+import { join } from 'path'
+import { existsSync, mkdirSync } from 'fs'
 import log from 'electron-log'
 
+const LOG_DIR = join(homedir(), '.futari', 'logs')
+if (!existsSync(LOG_DIR)) {
+  mkdirSync(LOG_DIR, { recursive: true })
+}
+
+log.transports.file.resolvePathFn = () => join(LOG_DIR, 'main.log')
 log.transports.file.level = 'silly'
 log.transports.console.level = 'silly'
 

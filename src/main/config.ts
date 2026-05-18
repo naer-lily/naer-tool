@@ -3,7 +3,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import { logger } from '@main/logger'
 
-interface FutariConfig {
+export interface FutariConfig {
   shortcut?: string
   theme?: 'light' | 'dark'
   plugins?: string[]
@@ -69,6 +69,24 @@ class ConfigManager {
       this.save()
       logger.info('[Config] removed plugin: %s', pluginPath)
     }
+  }
+
+  getRaw(): FutariConfig {
+    return { ...this.config }
+  }
+
+  patch(partial: Partial<FutariConfig>): void {
+    Object.assign(this.config, partial)
+    this.save()
+    logger.info('[Config] patched with:', partial)
+  }
+
+  getShortcut(): string {
+    return this.config.shortcut || 'Alt+Space'
+  }
+
+  getTheme(): 'light' | 'dark' {
+    return this.config.theme || 'dark'
   }
 }
 

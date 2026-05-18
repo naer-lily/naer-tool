@@ -12,4 +12,7 @@ export const IPC = {
   WEB_VIEW_MESSAGE: 'web-view-message',
   CLOSE_WEB_VIEW: 'close-web-view',
   WEB_VIEW_READY: 'web-view-ready',
+  LOG: 'log',
+  GET_CONFIG: 'get-config',
+  SET_CONFIG: 'set-config',
 } as const

@@ -12,6 +12,7 @@ import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
 import reloadPlugin from '@main/plugins/builtins/reload'
 import pluginCreator from '@main/plugins/builtins/plugin-creator'
+import settingsPlugin from '@main/plugins/builtins/settings'
 
 function registerBuiltinPlugins(): void {
   pluginHost.registerBuiltin(helloPlugin, 'hello')
@@ -24,6 +25,8 @@ function registerBuiltinPlugins(): void {
   reloadPlugin.onActivate({})
   pluginHost.registerBuiltin(pluginCreator, 'plugin-creator')
   pluginCreator.onActivate({})
+  pluginHost.registerBuiltin(settingsPlugin, 'settings')
+  settingsPlugin.onActivate({})
 }
 
 function loadUserPlugins(): void {
@@ -46,7 +49,9 @@ app.whenReady().then(() => {
   createWindow()
   createTray()
 
-  globalShortcut.register('Alt+Space', () => {
+  const shortcut = configManager.getShortcut()
+  logger.info('[App] registering global shortcut: %s', shortcut)
+  globalShortcut.register(shortcut, () => {
     toggleWindow()
   })
 

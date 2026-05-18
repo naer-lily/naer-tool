@@ -153,10 +153,6 @@ function createViewState() {
   function closeWebView(): void {
     if (!dispatch({ type: 'close-webview' })) return
     window.futariAPI.closeWebView()
-    query.value = ''
-    results.value = []
-    activeIndex.value = 0
-    doSearch()
   }
 
   async function selectResult(index: number): Promise<void> {
@@ -174,21 +170,31 @@ function createViewState() {
     const result = await window.futariAPI.execute(pluginId, item.id, query.value)
     executingCommand.value = false
 
-    logger.trace('[VS] selectResult execute returned webViewOpened=%s state=%s', result.webViewOpened, state.value.id)
-    if (result.webViewOpened) return
+    logger.trace('[VS] selectResult execute returned shouldClose=%s state=%s', result.shouldClose, state.value.id)
 
-    // State already reset (e.g. user pressed Escape → closeWebView), skip duplicate cleanup
-    if (state.value.id === 'home') {
-      logger.trace('[VS] selectResult state already home, skipping cleanup')
+    if (result.shouldClose) {
+      if (state.value.id === 'webview-loading' || state.value.id === 'webview-active') {
+        dispatch({ type: 'close-webview' })
+      } else if (state.value.id === 'subcommand') {
+        dispatch({ type: 'exit-subcommand' })
+      }
+      query.value = ''
+      results.value = []
+      activeIndex.value = 0
+      window.futariAPI.closeWindow()
       return
     }
 
+    if (state.value.id === 'webview-loading' || state.value.id === 'webview-active') {
+      dispatch({ type: 'close-webview' })
+    }
     query.value = ''
     results.value = []
     activeIndex.value = 0
-
     if (state.value.id === 'subcommand') {
       exitSubcommand()
+    } else {
+      doSearch()
     }
   }
 
@@ -196,6 +202,10 @@ function createViewState() {
     const s = state.value
     if (s.id === 'webview-loading' || s.id === 'webview-active') {
       closeWebView()
+      query.value = ''
+      results.value = []
+      activeIndex.value = 0
+      doSearch()
       return
     }
     if (s.id === 'subcommand') {
@@ -209,6 +219,10 @@ function createViewState() {
     const s = state.value
     if (s.id === 'webview-loading' || s.id === 'webview-active') {
       closeWebView()
+      query.value = ''
+      results.value = []
+      activeIndex.value = 0
+      doSearch()
       return
     }
     if (s.id === 'subcommand') {
@@ -216,14 +230,17 @@ function createViewState() {
     }
   }
 
-  function handleFocusInput(): void {
+  function handleFocusInput(onReady?: () => void): void {
     if (executingCommand.value) {
       logger.trace('[VS] handleFocusInput ignored: command execution in progress')
       return
     }
     if (!dispatch({ type: 'focus-input' })) return
     query.value = ''
-    nextTick(() => doSearch())
+    nextTick(async () => {
+      await doSearch()
+      onReady?.()
+    })
   }
 
   function handleAutoActivate(pluginId: string, icon?: string): void {

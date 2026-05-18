@@ -5,6 +5,7 @@ import { hideWindow, getMainWindow } from '@main/window-manager'
 import { showScreenToast } from '@main/toast'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
+import { configManager } from '@main/config'
 import { logger } from '@main/logger'
 
 export function registerIpc(): void {
@@ -22,13 +23,13 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.EXECUTE, async (_event, payload: { pluginId: string; commandId: string; input: string }) => {
     logger.trace('[IPC] EXECUTE plugin=%s cmd=%s input=%s', payload.pluginId, payload.commandId, payload.input)
     try {
-      await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+      const { shouldClose } = await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+      logger.trace('[IPC] EXECUTE done shouldClose=%s', shouldClose)
+      return { webViewOpened: false, shouldClose }
     } catch (err) {
       logger.error('[IPC] EXECUTE error:', err)
+      return { webViewOpened: false, shouldClose: true }
     }
-    const active = webViewManager.isActive
-    logger.trace('[IPC] EXECUTE done isActive=%s', active)
-    return { webViewOpened: active }
   })
 
   ipcMain.on(IPC.CLOSE, () => {
@@ -59,5 +60,21 @@ export function registerIpc(): void {
 
   ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
     webViewManager.handleMessage(data)
+  })
+
+  ipcMain.on(IPC.LOG, (_event, payload: { level: string; args: unknown[] }) => {
+    const fn = (logger as Record<string, (...a: unknown[]) => void>)[payload.level]
+    if (fn) {
+      fn('[renderer]', ...payload.args)
+    }
+  })
+
+  ipcMain.handle(IPC.GET_CONFIG, async () => {
+    return configManager.getRaw()
+  })
+
+  ipcMain.handle(IPC.SET_CONFIG, async (_event, partial: Record<string, unknown>) => {
+    configManager.patch(partial)
+    return { ok: true }
   })
 }

@@ -14,9 +14,9 @@ function generatePluginId(name: string): string {
 }
 
 function scaffoldJs(pluginName: string, pluginId: string, pluginIcon: string, prefix: string): string {
-  return `// Futari 插件: ${pluginName}
-// 用户插件必须是 .js 文件（require() 不能直接加载 TypeScript）
-// 同级目录下的 .d.ts 提供 IDE 类型提示
+  return `// Futari Plugin: ${pluginName}
+// User plugins must be .js files (require() cannot load TypeScript directly)
+// The sibling .d.ts provides IDE type hints
 
 const plugin = {
   id: '${pluginId}',
@@ -24,66 +24,71 @@ const plugin = {
   icon: '${pluginIcon}',
   prefix: '${prefix}',
 
-  // 插件激活时调用（加载 / 重载后）
+  // Called when plugin is activated (after load/reload)
   async onActivate() {},
 
-  // 插件停用时调用（卸载 / 重载前）
+  // Called when plugin is deactivated (before unload/reload)
   async onDeactivate() {},
 
-  // 子命令模式：用户输入 "前缀 " 后返回的命令列表
+  // Subcommand mode: commands shown after user types prefix + space
   async buildCommands() {
     return []
-    // 示例:
+    // Example:
     // return [{
     //   id: 'my-cmd',
-    //   name: '我的命令',
+    //   name: 'My Command',
     //   icon: '✨',
     //   match(input) {
-    //     return { preview: \`执行 \${input}\`, priority: 10 }
+    //     return { preview: \`Execute \${input}\`, priority: 10 }
     //   },
     //   execute(ctx) {
-    //     ctx.toast(\`你输入了: \${ctx.input}\`)
+    //     ctx.toast(\`You entered: \${ctx.input}\`)
+    //     // return 'close' → close window (default for non-WebView)
+    //     // return 'home' → back to home screen
     //   }
     // }]
     //
-    // WebView 分文件开发示例:
+    // WebView multi-file development example:
     // const path = require('path')
     // async execute(ctx) {
-    //   // openWebView 返回 Promise, 在 WebView 关闭时 resolve
+    //   // openWebView returns a Promise that resolves when WebView is closed
     //   const result = await ctx.openWebView({
-    //     htmlPath: path.join(__dirname, 'page.html'),  // <script src="./lib.js"> 可用
-    //     preload: path.join(__dirname, 'preload.js'),  // require('./lib.js') 可用
+    //     htmlPath: path.join(__dirname, 'page.html'),  // <script src="./lib.js"> works
+    //     preload: path.join(__dirname, 'preload.js'),  // require('./lib.js') works
     //     height: 400,
     //     injectBaseStyles: true
     //   })
-    //   // WebView 关闭后才执行这里; result 来自 futariWeb.close(data) 的值
-    //   ctx.toast('WebView 已关闭' + (result ? ': ' + JSON.stringify(result) : ''))
+    //   // Runs after WebView closes; result is from futariWeb.close(data)
+    //   // If result is defined → auto 'close' window
+    //   // If result is undefined → auto 'home' (user cancelled)
+    //   // Can override: return 'home' to stay even after successful save
     // }
   },
 
-  // 全局命令（主模式匹配）：不需要前缀
+  // Global commands (main mode matching): no prefix needed
   async getFallbackCommands() {
     return []
-    // 示例:
+    // Example:
     // return [{
     //   id: 'my-global',
-    //   name: '我的全局命令',
-    //   description: '在主搜索框显示的描述文本',
+    //   name: 'My Global Command',
+    //   description: 'Description shown in main search box',
     //   icon: '✨',
-    //   matches(input) { return input === '关键词' },
+    //   matches(input) { return input === 'keyword' },
     //   build(input) {
     //     return {
     //       id: 'my-global',
-    //       name: '我的全局命令',
+    //       name: 'My Global Command',
     //       icon: '✨',
-    //       match() { return { preview: '预览文本', priority: 10 } },
-    //       execute(ctx) { ctx.toast('已执行') }
+      //   match() { return { preview: 'Preview text', priority: 10 } },
+      //   execute(ctx) { ctx.toast('Executed') }
+      //     // return 'close' → close window | return 'home' → back to home
     //     }
     //   }
     // }]
   },
 
-  // 自动激活：Futari 显示时匹配前台窗口自动进入子命令模式（可选）
+  // Auto-activate: match foreground window to auto-enter subcommand mode (optional)
   // shouldAutoActivate(appInfo) {
   //   return appInfo.name === 'notepad.exe'
   // },
@@ -94,8 +99,8 @@ module.exports = plugin
 }
 
 function scaffoldDts(): string {
-  return `// Futari 插件类型声明
-// 为同级 index.js 提供 IDE 智能提示（无需导入，仅用于类型检查）
+  return `// Futari Plugin type declarations
+// Provides IDE intellisense for sibling index.js (no import needed, type-checking only)
 
 declare namespace Futari {
   interface CommandMatch { preview: string; priority?: number }
@@ -148,10 +153,12 @@ declare namespace Futari {
     fields: Futari.FormField[]
   }
 
+  type CommandOutcome = 'close' | 'home'
+
   interface ICommand {
     id: string; name: string; icon?: string
     match(input: string): CommandMatch | null
-    execute(ctx: CommandContext): void | Promise<void>
+    execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
   }
 
   interface IFallbackCommand {
@@ -193,18 +200,18 @@ function scaffoldPackageJson(pluginName: string, pluginId: string, typesPath: st
 
 async function createPluginViaForm(ctx: CommandContext): Promise<void> {
   const result = await ctx.showForm({
-    title: '创建新插件',
+    title: 'Create New Plugin',
     width: 440,
     fields: [
-      { type: 'input', key: 'name', label: '插件名称', defaultValue: ctx.input.trim() || '', placeholder: '我的插件', required: true },
-      { type: 'input', key: 'prefix', label: '前缀（可选）', placeholder: 'my', defaultValue: '' },
-      { type: 'input', key: 'icon', label: '图标（emoji）', defaultValue: '🔧', placeholder: '🔧' },
-      { type: 'file', key: 'folder', label: '目标文件夹', required: true }
+      { type: 'input', key: 'name', label: 'Plugin Name', defaultValue: ctx.input.trim() || '', placeholder: 'My Plugin', required: true },
+      { type: 'input', key: 'prefix', label: 'Prefix (optional)', placeholder: 'my', defaultValue: '' },
+      { type: 'input', key: 'icon', label: 'Icon (emoji)', defaultValue: '🔧', placeholder: '🔧' },
+      { type: 'file', key: 'folder', label: 'Target Folder', required: true }
     ]
   })
 
   if (!result) {
-    ctx.toast('已取消创建')
+    ctx.toast('Creation cancelled')
     return
   }
 
@@ -214,7 +221,7 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
   const folder = String(result.folder || '').trim()
 
   if (!pluginName || !folder) {
-    ctx.toast('插件名称和目标文件夹不能为空')
+    ctx.toast('Plugin name and target folder are required')
     return
   }
 
@@ -227,7 +234,7 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
 
   try {
     if (fsp.existsSync(pluginDir)) {
-      ctx.toast(`目录已存在: ${pluginDir}`)
+      ctx.toast(`Directory already exists: ${pluginDir}`)
       return
     }
     fsp.mkdirSync(pluginDir)
@@ -240,18 +247,18 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
     try {
       await pluginHost.loadFromPath(indexPath)
       prefixRegistry.rebuild()
-      ctx.toast(`插件已创建并加载: ${pluginDir}`)
+      ctx.toast(`Plugin created and loaded: ${pluginDir}`)
     } catch (err) {
-      ctx.toast(`插件已创建但加载失败: ${String(err).slice(0, 60)}`)
+      ctx.toast(`Plugin created but failed to load: ${String(err).slice(0, 60)}`)
     }
   } catch (e) {
-    ctx.toast(`创建失败: ${String(e).slice(0, 80)}`)
+    ctx.toast(`Creation failed: ${String(e).slice(0, 80)}`)
   }
 }
 
 const pluginCreator: IPlugin = {
   id: 'plugin-creator',
-  name: '创建插件',
+  name: 'Create Plugin',
   icon: '\u{1F9E9}',
 
   async onActivate() {},
@@ -264,21 +271,21 @@ const pluginCreator: IPlugin = {
   async getFallbackCommands() {
     return [{
       id: 'create-plugin',
-      name: '创建新插件',
-      description: '填写表单，创建插件骨架 (index.js + index.d.ts + package.json)',
+      name: 'Create New Plugin',
+      description: 'Fill form to scaffold plugin skeleton (index.js + index.d.ts + package.json)',
       icon: '\u{1F4C1}',
       matches(input: string): boolean {
         if (!input) return true
         const t = input.toLowerCase()
-        return '创建插件'.startsWith(t) || '创建新插件'.startsWith(t) || 'create-plugin'.startsWith(t) || 'new-plugin'.startsWith(t)
+        return 'create-plugin'.startsWith(t) || 'new-plugin'.startsWith(t)
       },
       build(_input: string) {
         return {
           id: 'create-plugin',
-          name: '创建新插件',
+          name: 'Create New Plugin',
           icon: '\u{1F4C1}',
           match(): CommandMatch {
-            return { preview: '打开表单 — 填写名称、前缀、图标并选择文件夹', priority: 10 }
+            return { preview: 'Open form — set name, prefix, icon and target folder', priority: 10 }
           },
           async execute(ctx: CommandContext): Promise<void> {
             await createPluginViaForm(ctx)

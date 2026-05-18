@@ -1,9 +1,98 @@
 # AGENTS.md
 
+## Architecture Philosophy
+
+Futari is a **transient launcher** — the window appears, the user performs one task, the window disappears. There is no persistent "main screen" that the user idles on. This shapes every design decision.
+
+### Core Model: Execute-and-Close
+
+Every command execution follows a single rule: **after the task completes, close the window**. The user's next invocation starts fresh with a clean home screen.
+
+The only exception is when the user **aborts** a task mid-flight — then they return to home mode to retry or do something else.
+
+### Completion vs Cancellation
+
+Distinction flows through `searchEngine.execute()` → `ExecuteResult.shouldClose`:
+
+```
+searchEngine tracks whether ctx.openWebView() was called and what it resolved to:
+
+  hadWebView = false     → no WebView at all     → task completed → shouldClose=true
+  hadWebView = true,
+    result = defined     → WebView closed w/ data → task completed → shouldClose=true
+  hadWebView = true,
+    result = undefined   → WebView closed w/o data → user cancelled → shouldClose=false
+```
+
+- `futariWeb.close(data)` with data → "task done" → window closes
+- `futariWeb.close()` with no args (or Escape / Backspace-empty) → "user aborted" → back to home
+
+This is the **single source of truth** for deciding what happens after execution. The renderer's `selectResult()` checks `shouldClose` and either calls `closeWindow()` or transitions to home.
+
+### Authority Boundary
+
+```
+Main process:              Renderer (Vue):
+  owns truth                owns display
+  ───────────              ──────────────
+  plugin execution          state machine (thin UI layer)
+  WebView lifecycle         search bar + result list
+  config persistence        theme rendering
+  shortcut registration     keyboard nav
+```
+
+The renderer state machine (`useViewState`) is a **display-only** state tracker. It reflects what the main process tells it to show. It never makes decisions about command outcomes — those come from `searchEngine.execute()` via the IPC EXECUTE response.
+
+### Window Lifecycle
+
+```
+         shortcut / tray
+              │
+    ┌─────────▼─────────┐
+    │   home screen      │  ← always starts here on show
+    │   (prefix entries  │
+    │    + fallbacks)    │
+    └────┬───────┬──────┘
+         │       │
+    prefix    select fallback
+    match     or prefix entry
+         │       │
+    ┌────▼───────▼────┐
+    │  subcommand     │  ← plugin-specific commands
+    └────┬────────────┘
+         │
+    select command
+         │
+    ┌────▼────────────┐
+    │  execute()      │
+    │  ┌──────────┐   │
+    │  │ non-WebView│──┼──→ shouldClose=true → closeWindow()
+    │  └──────────┘   │
+    │  ┌──────────┐   │
+    │  │ WebView   │   │
+    │  │  complete │───┼──→ shouldClose=true → closeWindow()
+    │  │  cancel   │───┼──→ shouldClose=false → home
+    │  └──────────┘   │
+    └─────────────────┘
+```
+
+When the window closes via `closeWindow()`, it goes off-screen (see Off-Screen Hide Pattern). The state machine is **not reset on close** — it's reset the next time `showWindow()` sends `focus-input`, which triggers `handleFocusInput()` → dispatch focus-input → wake-up on the home screen.
+
+### `executingCommand` is NOT a state
+
+The `executingCommand` flag is a transient race guard, not a UI state. It prevents `focus-input` IPC (triggered by `showWindow()`) from disrupting the `subcommand` state while `selectResult()` is awaiting execution. Once the command resolves, `executingCommand` clears immediately.
+
+### Key Design Rules
+
+1. **State machine transitions are guarded** — never assume a transition is valid; `dispatch()` returns `false` on invalid transitions.
+2. **IPC listeners run independently** — while `selectResult()` blocks on `await execute()`, other IPC listeners (`onShowWebView`, `onHideWebView`) fire independently and update state.
+3. **Window close = off-screen hide, never `win.hide()`** — see Off-Screen Hide Pattern below.
+4. **Config changes that require restart** (e.g. shortcut) are saved immediately but not applied until next launch.
+
 ## Tech Stack
 - Electron 33+ / Vue 3 (Composition API) / TypeScript
 - Build: `electron-vite` (Vite-based)
-- Logging: `electron-log` v5 (main process → file + console; renderer → console)
+- Logging: `electron-log` v5 (main + renderer → `~/.futari/logs/main.log` + console)
 - No UI component library — hand-written CSS only
 - Styles: CSS custom properties for light/dark themes; acrylic effect via `backdrop-filter`
 
@@ -12,27 +101,27 @@
 src/main/        Electron main process — NO DOM access
   index.ts          Entry: app lifecycle, builtin plugin registration, shortcut, config bootstrap
   window-manager.ts Search window (create/show/hide/toggle/auto-activate), off-screen hide pattern
-  search-engine.ts  Search dispatch (prefix/subcommand/fallback/home)
+  search-engine.ts  Search dispatch (prefix/subcommand/fallback/home) + execute with shouldClose tracking
   plugin-host.ts    Plugin lifecycle (load/unload/reload/loadFromPath)
   prefix-registry.ts Prefix → pluginId mapping
-  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/FORM_SUBMIT/WebView)
+  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/FORM_SUBMIT/WebView/LOG/CONFIG)
   toast.ts          Screen-bottom toast via data-URL BrowserWindow
   tray.ts           System tray icon + context menu
   web-view-manager.ts WebContentsView lifecycle (open/close/resize/input-forward), preload building
   form-dialog.ts    Form dialog (frameless BrowserWindow, custom title bar, CSS drag region)
-  config.ts         ~/.futari/config.json manager (load/save/plugin path persistence)
-  logger.ts         Main process logger (electron-log)
+  config.ts         ~/.futari/config.json manager (load/save/getRaw/patch)
+  logger.ts         Main process logger (electron-log → ~/.futari/logs/main.log)
   plugins/
-    builtins/       Built-in plugins (hello, calculator, run, reload, plugin-creator)
-src/preload/     contextBridge — exposes typed futariAPI to renderer
+    builtins/       Built-in plugins (hello, calculator, run, reload, plugin-creator, settings)
+src/preload/     contextBridge — exposes typed futariAPI to renderer (includes log forwarding)
 src/renderer/    Vue 3 SPA — NO Node.js access
   src/
     App.vue           Root component (search container, webview placeholder, toast)
     components/       SearchInput, ResultList
     composables/      useViewState (state machine), useSearch (IPC bridge), useKeyboardNav, useTheme
-    utils/logger.ts   Renderer logger (console)
+    utils/logger.ts   Renderer logger (console + IPC forward to main log file)
 src/shared/      Types and constants usable by both main + renderer
-resources/       web-view-preload.js (builtin preload for WebContentsView)
+resources/       web-view-preload.js, settings.html (builtin preload + settings WebView page)
 types/           futari-plugin-types local npm package (plugin TypeScript typings)
 docs/            plugin-development.md (plugin author tutorial)
 ```
@@ -118,16 +207,24 @@ dom-ready fires →
   send('show-web-view', {h,icon})→ handleShowWebView: icon=payload.icon ✓
   send('web-view-ready')        → handleWebViewReady: focus input
 
-... user presses Escape ...
-closeWebView():
-  dispatch(close-webview) → home
-  doSearch()                   ← repopulate home screen
+... user clicks Save (with data) ...
+WebView: futariWeb.close(data) →
   IPC close-web-view →
-    webViewManager.close()
-    resolve Promise(data)
+    webViewManager.close(data)
+    resolve Promise(data)         ← hadWebView=true, webViewResult=defined → shouldClose=true
 
 command.execute() resumes         selectResult() resumes
-execute() returns                 webViewOpened=false, state='home' → skip cleanup
+execute() returns shouldClose=true  shouldClose=true → closeWindow() ✓
+
+... OR user presses Escape / Cancel ...
+handleEscape() → closeWebView():
+  dispatch(close-webview) → home
+  doSearch()
+  IPC close-web-view →
+    webViewManager.close()        ← webViewResult=undefined → shouldClose=false
+
+                                  selectResult() resumes
+                                  state='home', shouldClose=false → re-doSearch
 ```
 
 ### `ctx.openWebView()` is now a Promise
@@ -163,7 +260,7 @@ interface WebViewConfig {
 - User plugins are `.js` CommonJS modules loaded via `require()` from paths listed in `~/.futari/config.json`
 - Config file `~/.futari/config.json` stores: `shortcut`, `theme`, `plugins` (array of paths)
 - `configManager.getPlugins()` reads paths; `pluginHost.loadFromPath(path)` requires and registers
-- Plugin-creator (`创建插件`) scaffolds new user plugins and auto-adds to config + loads immediately
+- Plugin-creator (`Create Plugin`) scaffolds new user plugins and auto-adds to config + loads immediately
 - Reload command re-reads config and re-`require()`s all user plugins from stored paths
 - `pluginHost.loadFromPath(path)`: resolves path, `delete require.cache`, requires module, calls `onActivate`, registers in map. Conflicts: unloads existing plugin with same ID first.
 
@@ -208,6 +305,32 @@ Renderer input → IPC("search", text)
 ```
 - Home screen prefix entries carry `prefixEntry` field; selecting one calls unified `enterSubcommand(pluginId, icon)`.
 - `enterSubcommand()` is the single entry point — used by prefix match, home entry selection, and auto-activate.
+
+## Command Outcome (`CommandOutcome`)
+
+Plugins control what happens after execution by returning from `ICommand.execute()`:
+
+```typescript
+type CommandOutcome = 'close' | 'home'
+```
+
+| Return value | WebView? | Behavior |
+|---|---|---|
+| `undefined` (no return) | No | `shouldClose = true` → close window |
+| `undefined` (no return) | Yes, `close(data)` with data | `shouldClose = true` → close window |
+| `undefined` (no return) | Yes, `close()` no data | `shouldClose = false` → back to home |
+| `'close'` | — | Close window (overrides WebView inference) |
+| `'home'` | — | Back to home screen (overrides WebView inference) |
+
+### Decision priority in `searchEngine.execute()`
+```
+1. Plugin returned 'close'  → shouldClose = true
+2. Plugin returned 'home'   → shouldClose = false
+3. Plugin opened WebView    → infer from close(data) value (defined → true, undefined → false)
+4. Otherwise (no WebView)   → shouldClose = true (default)
+```
+
+This gives plugins full control: a WebView that completed successfully can still `return 'home'` to keep the launcher open, and a non-WebView command can `return 'home'` to stay instead of closing.
 
 ## Toast API
 - `CommandContext.toast(message: string)` — injected function, no return value from `execute()`.
@@ -264,8 +387,8 @@ showWindow(): centerAtTop() → setOpacity(0) → setIgnoreMouseEvents(false) �
 - `nodeIntegration: true, contextIsolation: false` — form JS directly uses `require('electron')`
 
 ## Logging
-- **Main process** (`src/main/logger.ts`): `electron-log` v5 → file (`%APPDATA%/futari/logs/main.log`) + console
-- **Renderer** (`src/renderer/src/utils/logger.ts`): `console.log` with `[FUTARI]` prefix + millisecond timestamp
+- **Main process** (`src/main/logger.ts`): `electron-log` v5 → file (`~/.futari/logs/main.log`) + console
+- **Renderer** (`src/renderer/src/utils/logger.ts`): `console.log` + IPC forward to main log file, both with `[FUTARI]` prefix + millisecond timestamp
 - Levels: `error`, `warn`, `info`, `debug`, `trace` (trace = debug-level, all enabled)
 - Key trace points: dispatch state transitions, selectResult lifecycle, handleShowWebView icon, openWebView/config, dom-ready timing, IPC EXECUTE flow
 - Keep trace logs permanent — they document the async execution flow and are essential for debugging timing bugs
@@ -274,7 +397,7 @@ showWindow(): centerAtTop() → setOpacity(0) → setIgnoreMouseEvents(false) �
 - `npm run dev` — starts electron-vite dev server (renderer hot-reload)
 - `npm run build` — production build
 - `npm run lint` — vue-tsc type-check (main + web configs)
-- Log file: `tail -f "$APPDATA/futari/logs/main.log"` (or `%APPDATA%` on Windows)
+- Log file: `tail -f ~/.futari/logs/main.log`
 
 ## Phase-Based Development
 - Work stops after each phase for manual testing — do NOT proceed to next phase unprompted

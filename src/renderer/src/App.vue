@@ -2,6 +2,7 @@
   <div class="search-container" :class="{ 'webview-mode': webviewActive }">
     <div class="header">
       <SearchInput
+        ref="searchInputRef"
         v-model="query"
         :prefix-icon="activePluginIcon"
         @input="onInput"
@@ -36,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import SearchInput from '@/components/SearchInput.vue'
 import ResultList from '@/components/ResultList.vue'
 import { useSearch } from '@/composables/useSearch'
@@ -52,6 +53,7 @@ const {
   handleEscape, handleBackspace, handleFocusInput, handleAutoActivate
 } = useSearch()
 
+const searchInputRef = ref<InstanceType<typeof SearchInput> | null>(null)
 const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.value || ''))
 
 const { onKeydown: navKeydown } = useKeyboardNav({
@@ -76,7 +78,11 @@ function onKeydown(e: KeyboardEvent): void {
 
 onMounted(() => {
   doSearch()
-  window.futariAPI.onFocusInput(() => handleFocusInput())
+  window.futariAPI.onFocusInput(() => {
+    handleFocusInput(() => {
+      nextTick(() => searchInputRef.value?.focusInput())
+    })
+  })
   window.futariAPI.onToggleTheme(() => toggle())
   window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
     handleAutoActivate(pluginId, icon)

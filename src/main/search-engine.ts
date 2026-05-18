@@ -6,7 +6,12 @@ import { logger } from '@main/logger'
 import { readFileSync, existsSync } from 'fs'
 import { resolve as pathResolve, extname, isAbsolute } from 'path'
 import { clipboard, shell } from 'electron'
-import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
+import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext, CommandOutcome } from '@shared/plugin-api'
+
+export interface ExecuteResult {
+  webViewOpened: boolean
+  shouldClose: boolean
+}
 
 const MAX_RESULTS = 9
 
@@ -171,20 +176,28 @@ class SearchEngine {
     return normalizeResults(results)
   }
 
-  async execute(pluginId: string, commandId: string, input: string, showToast: (msg: string) => void): Promise<void> {
+  async execute(pluginId: string, commandId: string, input: string, showToast: (msg: string) => void): Promise<ExecuteResult> {
     const plugin = pluginHost.get(pluginId)
     if (!plugin) {
       logger.warn('[SE] execute: plugin not found id=%s', pluginId)
-      return
+      return { webViewOpened: false, shouldClose: true }
     }
 
     logger.trace('[SE] execute plugin=%s cmd=%s input=%s', pluginId, commandId, input)
+
+    let webViewResult: unknown = undefined
+    let hadWebView = false
 
     const ctx: CommandContext = {
       input,
       toast: showToast,
       showForm: (config) => formDialog.show(config),
-      openWebView: (config) => webViewManager.open(config),
+      openWebView: async (config) => {
+        hadWebView = true
+        const result = await webViewManager.open(config)
+        webViewResult = result
+        return result
+      },
       closeWebView: () => webViewManager.close(),
       clipboard: {
         writeText: (text) => clipboard.writeText(text),
@@ -209,9 +222,23 @@ class SearchEngine {
       }
     }
     const cmd = await this.resolveCommand(plugin, commandId, input)
+    let outcome: CommandOutcome | void = undefined
     if (cmd) {
-      await cmd.execute(ctx)
+      outcome = await cmd.execute(ctx)
     }
+
+    let shouldClose: boolean
+    if (outcome === 'close') {
+      shouldClose = true
+    } else if (outcome === 'home') {
+      shouldClose = false
+    } else if (hadWebView) {
+      shouldClose = webViewResult !== undefined
+    } else {
+      shouldClose = true
+    }
+    logger.trace('[SE] execute done hadWebView=%s wvResult=%o outcome=%s shouldClose=%s', hadWebView, webViewResult, outcome, shouldClose)
+    return { webViewOpened: false, shouldClose }
   }
 
   private async resolveCommand(plugin: { buildCommands(ctx: unknown): Promise<ICommand[]>; getFallbackCommands?(ctx: unknown): Promise<IFallbackCommand[]> }, commandId: string, input: string): Promise<ICommand | null> {
