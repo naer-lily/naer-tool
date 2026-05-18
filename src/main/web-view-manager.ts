@@ -139,7 +139,6 @@ class WebViewManager {
           width: CONTAINER_WIDTH,
           height: height - BOTTOM_SHADOW_SPACE
         })
-        void this.view.webContents.executeJavaScript('window.scrollTo(0,0)')
       }
 
       const wc = windowStateMachine.webContents
