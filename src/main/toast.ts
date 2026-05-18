@@ -1,6 +1,10 @@
 import { BrowserWindow, screen } from 'electron'
 
+const OFFSCREEN_X = -9999
+const OFFSCREEN_Y = -9999
+
 let toastWindow: BrowserWindow | null = null
+let hideTimer: ReturnType<typeof setTimeout> | null = null
 
 export function createToastWindow(): void {
   toastWindow = new BrowserWindow({
@@ -9,7 +13,7 @@ export function createToastWindow(): void {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    show: false,
+    show: true,
     resizable: false,
     skipTaskbar: true,
     focusable: false,
@@ -18,10 +22,18 @@ export function createToastWindow(): void {
     }
   })
   toastWindow.setIgnoreMouseEvents(true, { forward: true })
+  toastWindow.setOpacity(0)
+  toastWindow.setPosition(OFFSCREEN_X, OFFSCREEN_Y)
 }
 
 export function showScreenToast(message: string): void {
   if (!toastWindow) return
+
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
+
   const bounds = screen.getPrimaryDisplay().workArea
   const x = Math.round(bounds.x + (bounds.width - 360) / 2)
   const y = Math.round(bounds.y + bounds.height - 80)
@@ -33,13 +45,19 @@ export function showScreenToast(message: string): void {
     </html></body>`
   )}`)
 
-  toastWindow.show()
-  setTimeout(() => {
-    toastWindow?.hide()
+  toastWindow.setOpacity(1)
+  hideTimer = setTimeout(() => {
+    toastWindow?.setOpacity(0)
+    toastWindow?.setPosition(OFFSCREEN_X, OFFSCREEN_Y)
+    hideTimer = null
   }, 2000)
 }
 
 export function destroyToastWindow(): void {
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
   try {
     toastWindow?.close()
   } catch { /* window already destroyed */ }

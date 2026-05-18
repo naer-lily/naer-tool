@@ -8,12 +8,13 @@
 
 declare namespace Futari {
 
-  /** 命令匹配结果，由 ICommand.match() 返回 */
-  interface CommandMatch {
-    /** 搜索结果中显示的预览文本 */
-    preview: string
-    /** 排序优先级，数值越大越靠前 (默认 0) */
-    priority?: number
+  /** staticCommands 辅助函数的命令定义 */
+  interface StaticCommandDef {
+    id: string
+    name: string
+    icon?: string
+    match(input: string): { preview: string } | null
+    execute(ctx: Futari.CommandContext): Futari.CommandOutcome | void | Promise<Futari.CommandOutcome | void>
   }
 
   /** 伴生进程配置 */
@@ -191,9 +192,9 @@ declare namespace Futari {
   type CommandOutcome = 'close' | 'home'
 
   /**
-   * 子命令 — 用户输入前缀后出现在列表中的项
+   * 子命令 — 由 buildCommands 或 getFallbackCommands 根据用户输入动态生成
    *
-   * match() 在每次按键时调用，execute() 仅在选中后调用一次
+   * 数组顺序决定显示顺序，preview 由插件在生成时直接设定
    */
   interface ICommand {
     /** 命令唯一标识 (插件内唯一) */
@@ -202,46 +203,14 @@ declare namespace Futari {
     name: string
     /** 命令图标 (emoji 或 SVG 字符串) */
     icon?: string
-
-    /**
-     * 检查用户输入是否匹配此命令
-     * @returns 匹配结果 (含预览文本) 或 null 表示不匹配
-     */
-    match(input: string): CommandMatch | null
+    /** 搜索结果中显示的预览文本 */
+    preview: string
 
     /**
      * 执行命令
      * @returns CommandOutcome 可选，不返回则由框架推断 (详见 CommandOutcome)
      */
     execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
-  }
-
-  /**
-   * 全局回退命令 — 不需要前缀，在主搜索框中匹配
-   *
-   * matches() 判断是否触发，build() 构造可执行的 ICommand
-   */
-  interface IFallbackCommand {
-    /** 命令唯一标识 (全局唯一) */
-    id: string
-    /** 命令显示名称 */
-    name: string
-    /** 主搜索框中显示的描述文本 */
-    description: string
-    /** 命令图标 */
-    icon?: string
-
-    /**
-     * 判断用户输入是否匹配此命令
-     * @param input 用户输入的原始文本
-     */
-    matches(input: string): boolean
-
-    /**
-     * 构造可执行的命令实例
-     * @param input 用户输入的原始文本
-     */
-    build(input: string): ICommand
   }
 
   /** 前台窗口信息 (用于 shouldAutoActivate) */
@@ -266,8 +235,8 @@ declare namespace Futari {
    *   companion: { command: './server.exe', args: ['--port', '8080'], mode: 'http' },
    *   async onActivate(ctx) { ctx.log.info('activated') },
    *   async onDeactivate() {},
-   *   async buildCommands(ctx) { return [...] },
-   *   async getFallbackCommands(ctx) { return [...] },
+   *   async buildCommands(ctx, input) { return [...] },
+   *   async getFallbackCommands(ctx, input) { return [...] },
    *   shouldAutoActivate(appInfo) { return appInfo.name === 'notepad.exe' },
    * }
    * module.exports = plugin
@@ -290,11 +259,15 @@ declare namespace Futari {
     /** 插件停用 (卸载/重载前) */
     onDeactivate(): Promise<void>
 
-    /** 返回子命令列表 (用户输入前缀后调用一次) */
-    buildCommands(ctx: PluginContext): Promise<ICommand[]>
+    /** 根据用户输入动态返回子命令列表 (每次按键调用)
+     * @param input 用户去除前缀后的输入文本
+     */
+    buildCommands(ctx: PluginContext, input: string): Promise<ICommand[]>
 
-    /** 返回全局回退命令列表 (可选，有 prefix 的插件也可以提供) */
-    getFallbackCommands?(ctx: PluginContext): Promise<IFallbackCommand[]>
+    /** 返回全局回退命令列表 (可选，有 prefix 的插件也可以提供)
+     * @param input 用户输入的原始文本 (主搜索框)
+     */
+    getFallbackCommands?(ctx: PluginContext, input: string): Promise<ICommand[]>
 
     /**
      * 窗口显示时检查前台窗口，决定是否自动进入子命令模式 (可选)
@@ -304,5 +277,19 @@ declare namespace Futari {
   }
 }
 
+/**
+ * 静态命令策略辅助函数 — 将传统的 match() 模式适配为动态 buildCommands 签名
+ *
+ * 用法：
+ *   buildCommands: staticCommands([
+ *     { id: 'calc', name: '计算', match(input) { ... }, execute(ctx) { ... } }
+ *   ])
+ *
+ * @param defs 传统 StaticCommandDef 数组
+ * @returns 符合 buildCommands(ctx, input) 签名的函数
+ */
+declare function staticCommands(defs: Futari.StaticCommandDef[]): (ctx: Futari.PluginContext, input: string) => Promise<Futari.ICommand[]>
+
 declare const plugin: Futari.IPlugin
 export default plugin
+export { staticCommands }

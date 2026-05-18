@@ -1,4 +1,5 @@
-import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
+import { staticCommands } from '@shared/plugin-api'
+import type { IPlugin, CommandContext } from '@shared/plugin-api'
 
 function safeEval(expr: string): string {
   const sanitized = expr.replace(/[^0-9+\-*/().%\s]/g, '').trim()
@@ -23,32 +24,30 @@ const calculatorPlugin: IPlugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
-    return [{
-      id: 'calc',
-      name: '计算结果',
-      icon: '\u{1F522}',
-      match(input: string): CommandMatch | null {
-        const trimmed = input.trim()
-        if (!trimmed) {
-          return { preview: '输入表达式进行计算 (例: 2+3*4)', priority: 10 }
-        }
-        const result = safeEval(trimmed)
-        if (!result) {
-          return { preview: `无法计算: ${trimmed}`, priority: 1 }
-        }
-        return { preview: `= ${result}`, priority: 10 }
-      },
-      execute(ctx: CommandContext): void {
-        const result = safeEval(ctx.input.trim())
-        if (!result) {
-          ctx.toast('无法计算此表达式')
-          return
-        }
-        ctx.toast(`${ctx.input.trim()} = ${result}`)
+  buildCommands: staticCommands([{
+    id: 'calc',
+    name: '计算结果',
+    icon: '\u{1F522}',
+    match(input: string) {
+      const trimmed = input.trim()
+      if (!trimmed) {
+        return { preview: '输入表达式进行计算 (例: 2+3*4)' }
       }
-    }]
-  },
+      const result = safeEval(trimmed)
+      if (!result) {
+        return { preview: `无法计算: ${trimmed}` }
+      }
+      return { preview: `= ${result}` }
+    },
+    execute(ctx: CommandContext): void {
+      const result = safeEval(ctx.input.trim())
+      if (!result) {
+        ctx.toast('无法计算此表达式')
+        return
+      }
+      ctx.toast(`${ctx.input.trim()} = ${result}`)
+    }
+  }]),
 
   async getFallbackCommands() {
     return []

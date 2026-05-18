@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
+import type { IPlugin, ICommand, PluginContext, CommandContext } from '@shared/plugin-api'
 import { app } from 'electron'
 import { join } from 'path'
 import { configManager } from '@main/config'
@@ -38,33 +38,23 @@ const settingsPlugin: IPlugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
+  async buildCommands(_ctx: PluginContext, _input: string): Promise<ICommand[]> {
     return []
   },
 
-  async getFallbackCommands() {
+  async getFallbackCommands(_ctx: PluginContext, input: string): Promise<ICommand[]> {
+    if (input) {
+      const t = input.toLowerCase()
+      const match = 'settings'.startsWith(t) || 'config'.startsWith(t) || 'options'.startsWith(t) || 'preferences'.startsWith(t)
+      if (!match) return []
+    }
     return [{
       id: 'settings',
       name: 'Settings',
-      description: 'Configure shortcut, theme and other preferences',
       icon: '\u2699\uFE0F',
-      matches(input: string): boolean {
-        if (!input) return true
-        const t = input.toLowerCase()
-        return 'settings'.startsWith(t) || 'config'.startsWith(t) || 'options'.startsWith(t) || 'preferences'.startsWith(t)
-      },
-      build(_input: string) {
-        return {
-          id: 'settings',
-          name: 'Settings',
-          icon: '\u2699\uFE0F',
-          match(): CommandMatch {
-            return { preview: 'Open settings — configure shortcut, theme and preferences', priority: 10 }
-          },
-          async execute(ctx: CommandContext): Promise<void> {
-            await openSettings(ctx)
-          }
-        }
+      preview: 'Open settings — configure shortcut, theme and preferences',
+      async execute(ctx: CommandContext): Promise<void> {
+        await openSettings(ctx)
       }
     }]
   }

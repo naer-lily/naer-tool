@@ -1,8 +1,11 @@
 import type { WebViewConfig } from './web-view-api'
 
-export interface CommandMatch {
-  preview: string
-  priority?: number
+export interface StaticCommandDef {
+  id: string
+  name: string
+  icon?: string
+  match(input: string): { preview: string } | null
+  execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
 }
 
 export interface FormField {
@@ -82,19 +85,9 @@ export interface ICommand {
   id: string
   name: string
   icon?: string
+  preview: string
 
-  match(input: string): CommandMatch | null
   execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
-}
-
-export interface IFallbackCommand {
-  id: string
-  name: string
-  description: string
-  icon?: string
-
-  matches(input: string): boolean
-  build(input: string): ICommand
 }
 
 export interface AppInfo {
@@ -122,8 +115,8 @@ export interface IPlugin {
   onActivate(ctx: PluginContext): Promise<void>
   onDeactivate(): Promise<void>
 
-  buildCommands(ctx: PluginContext): Promise<ICommand[]>
-  getFallbackCommands?(ctx: PluginContext): Promise<IFallbackCommand[]>
+  buildCommands(ctx: PluginContext, input: string): Promise<ICommand[]>
+  getFallbackCommands?(ctx: PluginContext, input: string): Promise<ICommand[]>
   shouldAutoActivate?(appInfo: AppInfo): boolean
   getTrayItems?(): TrayMenuItem[]
   companion?: CompanionConfig | CompanionConfig[]
@@ -135,7 +128,6 @@ export interface SearchResult {
   name: string
   icon?: string
   preview: string
-  priority: number
   shortcutIndex: number
   prefixEntry?: string
 }
@@ -145,4 +137,34 @@ export interface SearchResponse {
   pluginId?: string
   pluginIcon?: string
   results: SearchResult[]
+}
+
+/**
+ * 静态命令策略辅助函数 — 将传统的 match() 模式适配为动态 buildCommands 签名
+ *
+ * 用法：
+ *   buildCommands: staticCommands([
+ *     { id: 'calc', name: '计算', match(input) { ... }, execute(ctx) { ... } }
+ *   ])
+ *
+ * @param defs 传统 StaticCommandDef 数组
+ * @returns 符合 buildCommands(ctx, input) 签名的函数
+ */
+export function staticCommands(defs: StaticCommandDef[]): (_ctx: PluginContext, input: string) => Promise<ICommand[]> {
+  return async (_ctx: PluginContext, input: string): Promise<ICommand[]> => {
+    const results: ICommand[] = []
+    for (const def of defs) {
+      const m = def.match(input)
+      if (m) {
+        results.push({
+          id: def.id,
+          name: def.name,
+          icon: def.icon,
+          preview: m.preview,
+          execute: def.execute
+        })
+      }
+    }
+    return results
+  }
 }

@@ -73,15 +73,13 @@ const plugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
+  async buildCommands(ctx, input) {
     return [
       {
         id: 'hello',
         name: '打招呼',
         icon: '👋',
-        match(input) {
-          return { preview: `你好 ${input || '世界'}`, priority: 10 }
-        },
+        preview: `你好 ${input || '世界'}`,
         execute(ctx) {
           ctx.toast(`你好，${ctx.input || '世界'}！`)
         }
@@ -105,8 +103,8 @@ interface IPlugin {
   onActivate(ctx): Promise<void>    // 加载/重载时调用
   onDeactivate(): Promise<void>     // 卸载/重载前调用
 
-  buildCommands(ctx): Promise<ICommand[]>      // 子命令列表
-  getFallbackCommands?(ctx): Promise<IFallbackCommand[]>  // 全局命令
+  buildCommands(ctx, input): Promise<ICommand[]>      // 子命令列表（每次按键调用）
+  getFallbackCommands?(ctx, input): Promise<ICommand[]>  // 全局命令（每次按键调用）
   shouldAutoActivate?(appInfo): boolean        // 自动激活（匹配前台窗口）
 }
 ```
@@ -117,18 +115,14 @@ interface IPlugin {
 
 ### 4.1 子命令 (ICommand)
 
-通过 `prefix` 进入子命令模式后展示。`match()` 在用户**每次按键**时调用。
+通过 `prefix` 进入子命令模式后展示。`buildCommands(ctx, input)` 在用户**每次按键**时调用，插件根据当前输入动态决定返回哪些命令。
 
 ```javascript
 {
   id: 'my-cmd',
   name: '我的命令',
   icon: '✨',
-  match(input) {
-    // 每次按键都调用；返回 null 表示不匹配
-    if (!input) return { preview: '请输入内容', priority: 10 }
-    return { preview: `执行: ${input}`, priority: 10 }
-  },
+  preview: `执行: ${input}`,
   execute(ctx) {
     // 用户按 Enter 选中后调用
     ctx.toast(`已执行: ${ctx.input}`)
@@ -136,28 +130,51 @@ interface IPlugin {
 }
 ```
 
-### 4.2 全局命令 (IFallbackCommand)
+**数字顺序决定显示顺序** — 插件返回数组的第一个命令排在最前面。
 
-在主模式（无前缀）下生效。`matches()` 做快速过滤，`build()` 返回具体命令。
+### 4.2 `staticCommands()` — 静态策略辅助函数
+
+如果习惯传统的 `match()` 模式（根据输入动态返回 preview），可以使用 `staticCommands()` 包装：
 
 ```javascript
-{
-  id: 'my-global',
-  name: '全局命令',
-  description: '在主搜索框显示的描述',
-  icon: '🌍',
-  matches(input) {
-    return input === 'keyword' || input.startsWith('kw')
-  },
-  build(input) {
-    return {
-      id: 'my-global',
-      name: '全局命令',
-      icon: '🌍',
-      match() { return { preview: `处理: ${input}`, priority: 10 } },
-      execute(ctx) { ctx.toast('已执行') }
+const { staticCommands } = require('futari-plugin-api')
+
+// 或者通过全局 Futari 命名空间:
+// buildCommands: Futari.staticCommands([...])
+
+module.exports = {
+  // ...
+  buildCommands: staticCommands([
+    {
+      id: 'my-cmd',
+      name: '我的命令',
+      icon: '✨',
+      match(input) {
+        if (!input) return { preview: '请输入内容' }
+        return { preview: `执行: ${input}` }
+      },
+      execute(ctx) { ctx.toast(`已执行: ${ctx.input}`) }
     }
-  }
+  ])
+}
+```
+
+`staticCommands` 内部会调用每个定义的 `match(input)`，匹配的项映射为 `ICommand` 返回。
+
+### 4.3 全局命令 (getFallbackCommands)
+
+在主模式（无前缀）下生效。与 `buildCommands` 一样，直接返回 `ICommand[]`：
+
+```javascript
+async getFallbackCommands(ctx, input) {
+  if (input && !('keyword'.startsWith(input.toLowerCase()))) return []
+  return [{
+    id: 'my-global',
+    name: '全局命令',
+    icon: '🌍',
+    preview: input ? `处理: ${input}` : '输入关键词触发',
+    execute(ctx) { ctx.toast('已执行') }
+  }]
 }
 ```
 
@@ -409,16 +426,12 @@ const plugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
+  async buildCommands(ctx, input) {
     return [{
       id: 'query',
       name: '查询天气',
       icon: '🌤️',
-      match(input) {
-        const city = input.trim()
-        if (!city) return { preview: '输入城市名查询天气', priority: 10 }
-        return { preview: `查询 ${city} 天气`, priority: 10 }
-      },
+      preview: input.trim() ? `查询 ${input.trim()} 天气` : '输入城市名查询天气',
       execute(ctx) {
         ctx.openWebView({
           htmlPath: path.join(__dirname, 'page.html'),

@@ -1,7 +1,7 @@
 import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
-import type { IPlugin, IFallbackCommand, PluginContext, CompanionConfig, CompanionHandle } from '@shared/plugin-api'
+import type { IPlugin, ICommand, PluginContext, CompanionConfig, CompanionHandle } from '@shared/plugin-api'
 import { logger, createPluginLogger } from '@main/logger'
 import { companionManager } from '@main/companion-manager'
 
@@ -138,12 +138,12 @@ class PluginHost {
     }
   }
 
-  async getFallbackCommands(): Promise<{ pluginId: string; cmd: IFallbackCommand }[]> {
-    const result: { pluginId: string; cmd: IFallbackCommand }[] = []
+  async getFallbackCommands(input: string): Promise<{ pluginId: string; cmd: ICommand }[]> {
+    const result: { pluginId: string; cmd: ICommand }[] = []
     for (const [pluginId, plugin] of this.plugins) {
       if (plugin.getFallbackCommands) {
         const ctx = buildPluginContext(pluginId)
-        const cmds = await plugin.getFallbackCommands(ctx)
+        const cmds = await plugin.getFallbackCommands(ctx, input)
         for (const cmd of cmds) {
           result.push({ pluginId, cmd })
         }

@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
+import type { IPlugin, ICommand, PluginContext, CommandContext } from '@shared/plugin-api'
 import { app } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -32,11 +32,11 @@ const plugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
+  async buildCommands(ctx, input) {
     return []
   },
 
-  async getFallbackCommands() {
+  async getFallbackCommands(ctx, input) {
     return []
   },
 }
@@ -141,33 +141,23 @@ const pluginCreator: IPlugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
+  async buildCommands(_ctx: PluginContext, _input: string): Promise<ICommand[]> {
     return []
   },
 
-  async getFallbackCommands() {
+  async getFallbackCommands(_ctx: PluginContext, input: string): Promise<ICommand[]> {
+    if (input) {
+      const t = input.toLowerCase()
+      const match = 'create-plugin'.startsWith(t) || 'new-plugin'.startsWith(t)
+      if (!match) return []
+    }
     return [{
       id: 'create-plugin',
       name: 'Create New Plugin',
-      description: 'Scaffold a new plugin in ~/.futari/plugins/',
       icon: '\u{1F4C1}',
-      matches(input: string): boolean {
-        if (!input) return true
-        const t = input.toLowerCase()
-        return 'create-plugin'.startsWith(t) || 'new-plugin'.startsWith(t)
-      },
-      build(_input: string) {
-        return {
-          id: 'create-plugin',
-          name: 'Create New Plugin',
-          icon: '\u{1F4C1}',
-          match(): CommandMatch {
-            return { preview: 'Open form — set name, prefix, and icon', priority: 10 }
-          },
-          async execute(ctx: CommandContext): Promise<void> {
-            await createPluginViaForm(ctx)
-          }
-        }
+      preview: 'Open form — set name, prefix, and icon',
+      async execute(ctx: CommandContext): Promise<void> {
+        await createPluginViaForm(ctx)
       }
     }]
   }

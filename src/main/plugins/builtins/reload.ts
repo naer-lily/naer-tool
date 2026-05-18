@@ -1,4 +1,4 @@
-import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
+import type { IPlugin, ICommand, PluginContext, CommandContext } from '@shared/plugin-api'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 
@@ -10,36 +10,24 @@ const reloadPlugin: IPlugin = {
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands() {
+  async buildCommands(_ctx: PluginContext, _input: string): Promise<ICommand[]> {
     return []
   },
 
-  async getFallbackCommands() {
+  async getFallbackCommands(_ctx: PluginContext, input: string): Promise<ICommand[]> {
+    if (input && !('reload'.startsWith(input.toLowerCase()))) return []
     return [{
       id: 'reload-plugins',
       name: 'Reload Plugins',
-      description: 'Rescan ~/.futari/plugins/ and reload all',
       icon: '\u{1F504}',
-      matches(input: string): boolean {
-        return !input || input === 'reload' || 'reload'.startsWith(input.toLowerCase())
-      },
-      build() {
-        return {
-          id: 'reload-plugins',
-          name: 'Reload Plugins',
-          icon: '\u{1F504}',
-          match(): CommandMatch {
-            return { preview: 'Rescan and reload all user plugins', priority: 5 }
-          },
-          async execute(ctx: CommandContext): Promise<void> {
-            try {
-              await pluginHost.scanAndLoadUserPlugins()
-              prefixRegistry.rebuild()
-              ctx.toast('Plugins reloaded')
-            } catch (e) {
-              ctx.toast(`Reload failed: ${String(e).slice(0, 80)}`)
-            }
-          }
+      preview: 'Rescan and reload all user plugins',
+      async execute(ctx: CommandContext): Promise<void> {
+        try {
+          await pluginHost.scanAndLoadUserPlugins()
+          prefixRegistry.rebuild()
+          ctx.toast('Plugins reloaded')
+        } catch (e) {
+          ctx.toast(`Reload failed: ${String(e).slice(0, 80)}`)
         }
       }
     }]
