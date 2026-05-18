@@ -105,6 +105,7 @@ onMounted(() => {
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  border-bottom: none;
 }
 
 .search-container.webview-mode .header {
