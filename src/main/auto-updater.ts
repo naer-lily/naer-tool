@@ -80,6 +80,7 @@ class AutoUpdaterManager {
   }
 
   async checkForUpdates(): Promise<UpdateInfo> {
+    // guard: prevent concurrent update checks
     if (this.updating) {
       logger.warn('[Updater] check blocked: update already in progress')
       return { available: false, currentVersion: app.getVersion() }
