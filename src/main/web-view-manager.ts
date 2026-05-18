@@ -101,6 +101,10 @@ class WebViewManager {
     this.view.setBackgroundColor('#00000000')
 
     mainWin.contentView.addChildView(this.view)
+    // 初始高度 1px — 此时页面尚未加载，窗口也还未扩展。
+    // ⚠️ 注意: 1px 视口会导致页面 JS 中的 focus()/select() 触发浏览器的
+    //    scroll-into-view 行为，污染滚动位置（后续 expand 后无法自动恢复）。
+    //    因此 WebView 页面应避免在 load 阶段调用 focus()。
     this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height: 1 })
 
     if (config.html) {
