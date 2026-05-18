@@ -17,7 +17,7 @@
       子命令模式 · 退格清空返回
     </div>
 
-    <div v-if="webviewActive" class="webview-placeholder" :style="{ minHeight: webviewHeight + 'px' }">
+    <div v-if="webviewActive" class="webview-placeholder" :style="{ minHeight: Math.max(0, webviewHeight - 24) + 'px' }">
       <div v-if="webviewLoading" class="webview-loading">
         <span class="loading-spinner"></span>
         加载中...

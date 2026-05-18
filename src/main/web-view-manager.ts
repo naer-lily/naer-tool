@@ -13,6 +13,7 @@ const WIN_WIDTH = 680
 const CONTAINER_WIDTH = 648
 const CONTAINER_X = Math.round((WIN_WIDTH - CONTAINER_WIDTH) / 2)
 const SEARCH_HEIGHT = 64
+const BOTTOM_SHADOW_SPACE = 24
 
 let tempPreloadPath: string | null = null
 
@@ -142,7 +143,12 @@ class WebViewManager {
     mainWin.setResizable(false)
 
     if (this.view) {
-      this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height })
+      this.view.setBounds({
+        x: CONTAINER_X,
+        y: SEARCH_HEIGHT,
+        width: CONTAINER_WIDTH,
+        height: height - BOTTOM_SHADOW_SPACE
+      })
     }
   }
 
