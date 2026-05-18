@@ -10,9 +10,9 @@ function buildFormHtml(config: FormConfig): string {
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);overflow:hidden;user-select:none}
 .win{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bd);overflow:hidden}
-.title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0;-webkit-app-region:drag}
-.title-bar span{font-size:12px;font-weight:600;color:var(--t1)}
-.title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center;-webkit-app-region:no-drag}
+.title-bar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:36px;border-bottom:1px solid var(--dv);flex-shrink:0;cursor:default}
+.title-bar span{font-size:12px;font-weight:600;color:var(--t1);pointer-events:none}
+.title-bar button{width:24px;height:24px;border:none;background:none;color:var(--t2);font-size:16px;cursor:pointer;border-radius:4px;line-height:24px;text-align:center}
 .title-bar button:hover{background:var(--hv);color:var(--t1)}
 .body{flex:1;padding:8px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
 .footer{display:flex;justify-content:flex-end;gap:8px;padding:8px 16px;border-top:1px solid var(--dv);flex-shrink:0}
@@ -60,6 +60,22 @@ ${config.fields.map(f => getterJs(f)).join('\n')}
   ipcRenderer.send('form-submit',vals)
   window.close()
 }
+
+var dragging = false, sx = 0, sy = 0, wx = 0, wy = 0
+document.querySelector('.title-bar').addEventListener('mousedown', async function(e) {
+  if (e.target.tagName === 'BUTTON') return
+  dragging = true
+  sx = e.screenX
+  sy = e.screenY
+  var b = await ipcRenderer.invoke('form-get-bounds')
+  wx = b.x
+  wy = b.y
+})
+window.addEventListener('mousemove', function(e) {
+  if (!dragging) return
+  ipcRenderer.send('form-set-position', wx + e.screenX - sx, wy + e.screenY - sy)
+})
+window.addEventListener('mouseup', function() { dragging = false })
 </script>
 </body></html>`
 }

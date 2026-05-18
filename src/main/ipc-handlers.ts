@@ -60,4 +60,20 @@ export function registerIpc(): void {
   ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
     webViewManager.handleMessage(data)
   })
+
+  ipcMain.handle('form-get-bounds', (event) => {
+    const formWin = formDialog.getWindow(event.sender.id)
+    if (formWin) {
+      const [x, y] = formWin.getPosition()
+      return { x, y }
+    }
+    return { x: 0, y: 0 }
+  })
+
+  ipcMain.on('form-set-position', (_event, x: number, y: number) => {
+    const formWin = formDialog.getWindow(_event.sender.id)
+    if (formWin) {
+      formWin.setPosition(Math.round(x), Math.round(y))
+    }
+  })
 }

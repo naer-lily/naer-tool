@@ -32,6 +32,29 @@ class PluginHost {
     return plugin
   }
 
+  async loadFromPath(pluginPath: string): Promise<IPlugin> {
+    const resolved = require.resolve(pluginPath)
+    delete require.cache[resolved]
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require(pluginPath)
+    const plugin: IPlugin = mod.default || mod
+
+    if (!plugin.id || !plugin.name) {
+      delete require.cache[resolved]
+      throw new Error(`Plugin at "${pluginPath}" missing id or name`)
+    }
+
+    if (this.plugins.has(plugin.id)) {
+      await this.unload(plugin.id)
+    }
+
+    await plugin.onActivate({})
+    this.plugins.set(plugin.id, plugin)
+    this.pluginPaths.set(plugin.id, pluginPath)
+    return plugin
+  }
+
   async unload(pluginId: string): Promise<void> {
     const plugin = this.plugins.get(pluginId)
     if (!plugin) return

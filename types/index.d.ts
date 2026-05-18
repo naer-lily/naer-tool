@@ -14,6 +14,19 @@ declare namespace Futari {
     showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
     openWebView(config: Futari.WebViewConfig): Promise<unknown>
     closeWebView(): void
+    clipboard: {
+      writeText(text: string): void
+      readText(): string
+      writeHTML(html: string): void
+      readHTML(): string
+      clear(): void
+    }
+    shell: {
+      openExternal(url: string): Promise<void>
+      openPath(path: string): Promise<string>
+      showItemInFolder(path: string): void
+      beep(): void
+    }
   }
 
   interface WebViewConfig {

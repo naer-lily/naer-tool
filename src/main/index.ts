@@ -5,6 +5,8 @@ import { createTray, destroyTray } from '@main/tray'
 import { registerIpc } from '@main/ipc-handlers'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
+import { configManager } from '@main/config'
+import { logger } from '@main/logger'
 import helloPlugin from '@main/plugins/builtins/hello'
 import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
@@ -22,11 +24,24 @@ function registerBuiltinPlugins(): void {
   reloadPlugin.onActivate({})
   pluginHost.registerBuiltin(pluginCreator, 'plugin-creator')
   pluginCreator.onActivate({})
-  prefixRegistry.rebuild()
+}
+
+function loadUserPlugins(): void {
+  for (const pluginPath of configManager.getPlugins()) {
+    try {
+      pluginHost.loadFromPath(pluginPath)
+      logger.info('[App] loaded user plugin: %s', pluginPath)
+    } catch (e) {
+      logger.error('[App] failed to load user plugin %s:', pluginPath, e)
+    }
+  }
 }
 
 app.whenReady().then(() => {
+  configManager.load()
   registerBuiltinPlugins()
+  loadUserPlugins()
+  prefixRegistry.rebuild()
   createToastWindow()
   createWindow()
   createTray()

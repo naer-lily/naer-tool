@@ -1,6 +1,7 @@
 import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
+import { configManager } from '@main/config'
 
 const reloadPlugin: IPlugin = {
   id: 'reload',
@@ -31,9 +32,16 @@ const reloadPlugin: IPlugin = {
           match(): CommandMatch {
             return { preview: '重新加载所有插件', priority: 5 }
           },
-          execute(ctx: CommandContext): void {
+          async execute(ctx: CommandContext): Promise<void> {
             try {
-              pluginHost.reloadAll()
+              await pluginHost.reloadAll()
+              for (const pluginPath of configManager.getPlugins()) {
+                try {
+                  await pluginHost.loadFromPath(pluginPath)
+                } catch {
+                  // plugin may already be loaded
+                }
+              }
               prefixRegistry.rebuild()
               ctx.toast('插件已重载')
             } catch (e) {

@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron')
+const { ipcRenderer, clipboard, shell } = require('electron')
 
 window.futariWeb = {
   onSubInputChange(cb) {
@@ -21,5 +21,44 @@ window.futariWeb = {
 
   close(data) {
     ipcRenderer.send('close-web-view', data)
+  },
+
+  clipboard: {
+    writeText(text) {
+      clipboard.writeText(text)
+    },
+    readText() {
+      return clipboard.readText()
+    },
+    writeHTML(html) {
+      clipboard.writeHTML(html)
+    },
+    readHTML() {
+      return clipboard.readHTML()
+    },
+    writeImage(image) {
+      clipboard.writeImage(image)
+    },
+    readImage() {
+      return clipboard.readImage()
+    },
+    clear() {
+      clipboard.clear()
+    }
+  },
+
+  shell: {
+    openExternal(url) {
+      shell.openExternal(url)
+    },
+    openPath(path) {
+      return shell.openPath(path)
+    },
+    showItemInFolder(path) {
+      shell.showItemInFolder(path)
+    },
+    beep() {
+      shell.beep()
+    }
   }
 }

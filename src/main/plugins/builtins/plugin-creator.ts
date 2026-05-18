@@ -1,6 +1,9 @@
 import type { IPlugin, CommandMatch, CommandContext } from '@shared/plugin-api'
 import { app } from 'electron'
 import { join } from 'path'
+import { pluginHost } from '@main/plugin-host'
+import { configManager } from '@main/config'
+import { prefixRegistry } from '@main/prefix-registry'
 
 function sanitizeFileName(name: string): string {
   return name.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 60) || 'new-plugin'
@@ -103,6 +106,19 @@ declare namespace Futari {
     showForm(config: Futari.FormConfig): Promise<Record<string, unknown> | null>
     openWebView(config: Futari.WebViewConfig): Promise<unknown>
     closeWebView(): void
+    clipboard: {
+      writeText(text: string): void
+      readText(): string
+      writeHTML(html: string): void
+      readHTML(): string
+      clear(): void
+    }
+    shell: {
+      openExternal(url: string): Promise<void>
+      openPath(path: string): Promise<string>
+      showItemInFolder(path: string): void
+      beep(): void
+    }
   }
 
   interface WebViewConfig {
@@ -218,7 +234,16 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
     fsp.writeFileSync(pth.join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
     fsp.writeFileSync(pth.join(pluginDir, 'index.d.ts'), scaffoldDts(), 'utf-8')
     fsp.writeFileSync(pth.join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId, join(app.getAppPath(), 'types')), 'utf-8')
-    ctx.toast(`插件已创建: ${pluginDir}`)
+
+    const indexPath = pth.join(pluginDir, 'index.js')
+    configManager.addPlugin(indexPath)
+    try {
+      await pluginHost.loadFromPath(indexPath)
+      prefixRegistry.rebuild()
+      ctx.toast(`插件已创建并加载: ${pluginDir}`)
+    } catch (err) {
+      ctx.toast(`插件已创建但加载失败: ${String(err).slice(0, 60)}`)
+    }
   } catch (e) {
     ctx.toast(`创建失败: ${String(e).slice(0, 80)}`)
   }

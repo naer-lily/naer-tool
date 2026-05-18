@@ -28,6 +28,19 @@ export interface CommandContext {
   showForm(config: FormConfig): Promise<Record<string, unknown> | null>
   openWebView: (config: WebViewConfig) => Promise<unknown>
   closeWebView: () => void
+  clipboard: {
+    writeText(text: string): void
+    readText(): string
+    writeHTML(html: string): void
+    readHTML(): string
+    clear(): void
+  }
+  shell: {
+    openExternal(url: string): Promise<void>
+    openPath(path: string): Promise<string>
+    showItemInFolder(path: string): void
+    beep(): void
+  }
 }
 
 export type CommandResult = void

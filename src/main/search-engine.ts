@@ -5,6 +5,7 @@ import { webViewManager } from '@main/web-view-manager'
 import { logger } from '@main/logger'
 import { readFileSync, existsSync } from 'fs'
 import { resolve as pathResolve, extname, isAbsolute } from 'path'
+import { clipboard, shell } from 'electron'
 import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext } from '@shared/plugin-api'
 
 const MAX_RESULTS = 9
@@ -184,7 +185,20 @@ class SearchEngine {
       toast: showToast,
       showForm: (config) => formDialog.show(config),
       openWebView: (config) => webViewManager.open(config),
-      closeWebView: () => webViewManager.close()
+      closeWebView: () => webViewManager.close(),
+      clipboard: {
+        writeText: (text) => clipboard.writeText(text),
+        readText: () => clipboard.readText(),
+        writeHTML: (html) => clipboard.writeHTML(html),
+        readHTML: () => clipboard.readHTML(),
+        clear: () => clipboard.clear()
+      },
+      shell: {
+        openExternal: (url) => shell.openExternal(url),
+        openPath: (path) => shell.openPath(path),
+        showItemInFolder: (path) => shell.showItemInFolder(path),
+        beep: () => shell.beep()
+      }
     }
 
     if (plugin.icon) {
