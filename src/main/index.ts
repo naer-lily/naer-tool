@@ -1,5 +1,5 @@
 import { app, BrowserWindow, globalShortcut } from 'electron'
-import { createWindow, toggleWindow } from '@main/window-manager'
+import { createWindow, toggleWindow, showWindow } from '@main/window-manager'
 import { createToastWindow, destroyToastWindow } from '@main/toast'
 import { createTray, destroyTray } from '@main/tray'
 import { registerIpc } from '@main/ipc-handlers'
@@ -7,6 +7,7 @@ import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { configManager } from '@main/config'
 import { logger } from '@main/logger'
+import { companionManager } from '@main/companion-manager'
 import helloPlugin from '@main/plugins/builtins/hello'
 import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
@@ -14,28 +15,33 @@ import reloadPlugin from '@main/plugins/builtins/reload'
 import pluginCreator from '@main/plugins/builtins/plugin-creator'
 import settingsPlugin from '@main/plugins/builtins/settings'
 
-function registerBuiltinPlugins(): void {
-  pluginHost.registerBuiltin(helloPlugin, 'hello')
-  helloPlugin.onActivate({})
-  pluginHost.registerBuiltin(calculatorPlugin, 'calculator')
-  calculatorPlugin.onActivate({})
-  pluginHost.registerBuiltin(runPlugin, 'run')
-  runPlugin.onActivate({})
-  pluginHost.registerBuiltin(reloadPlugin, 'reload')
-  reloadPlugin.onActivate({})
-  pluginHost.registerBuiltin(pluginCreator, 'plugin-creator')
-  pluginCreator.onActivate({})
-  pluginHost.registerBuiltin(settingsPlugin, 'settings')
-  settingsPlugin.onActivate({})
+async function registerBuiltinPlugins(): Promise<void> {
+  await pluginHost.activateBuiltin(helloPlugin, 'hello')
+  await pluginHost.activateBuiltin(calculatorPlugin, 'calculator')
+  await pluginHost.activateBuiltin(runPlugin, 'run')
+  await pluginHost.activateBuiltin(reloadPlugin, 'reload')
+  await pluginHost.activateBuiltin(pluginCreator, 'plugin-creator')
+  await pluginHost.activateBuiltin(settingsPlugin, 'settings')
 }
 
 function loadUserPlugins(): void {
   pluginHost.scanAndLoadUserPlugins()
 }
 
-app.whenReady().then(() => {
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    showWindow()
+  })
+}
+
+app.whenReady().then(async () => {
   configManager.load()
-  registerBuiltinPlugins()
+  app.setLoginItemSettings({ openAtLogin: configManager.getLaunchAtStartup() })
+  await registerBuiltinPlugins()
   loadUserPlugins()
   prefixRegistry.rebuild()
   createToastWindow()
@@ -67,4 +73,5 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
   destroyTray()
   destroyToastWindow()
+  companionManager.stopAll()
 })

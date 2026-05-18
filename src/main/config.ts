@@ -1,11 +1,13 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
+import { app } from 'electron'
 import { logger } from '@main/logger'
 
 export interface FutariConfig {
   shortcut?: string
   theme?: 'light' | 'dark'
+  launchAtStartup?: boolean
 }
 
 const CONFIG_DIR = join(homedir(), '.futari')
@@ -21,7 +23,8 @@ class ConfigManager {
     if (!existsSync(CONFIG_PATH)) {
       const defaults: FutariConfig = {
         shortcut: 'Alt+Space',
-        theme: 'dark'
+        theme: 'dark',
+        launchAtStartup: false
       }
       this.config = defaults
       this.save()
@@ -32,7 +35,7 @@ class ConfigManager {
         logger.info('[Config] loaded config')
       } catch (e) {
         logger.error('[Config] failed to parse config:', e)
-        this.config = { shortcut: 'Alt+Space', theme: 'dark' }
+        this.config = { shortcut: 'Alt+Space', theme: 'dark', launchAtStartup: false }
       }
     }
     return this.config
@@ -52,6 +55,9 @@ class ConfigManager {
 
   patch(partial: Partial<FutariConfig>): void {
     Object.assign(this.config, partial)
+    if ('launchAtStartup' in partial) {
+      app.setLoginItemSettings({ openAtLogin: partial.launchAtStartup })
+    }
     this.save()
     logger.info('[Config] patched with:', partial)
   }
@@ -62,6 +68,10 @@ class ConfigManager {
 
   getTheme(): 'light' | 'dark' {
     return this.config.theme || 'dark'
+  }
+
+  getLaunchAtStartup(): boolean {
+    return this.config.launchAtStartup || false
   }
 }
 

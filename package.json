@@ -1,6 +1,6 @@
 {
   "name": "futari",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Futari - Plugin-based command launcher",
   "main": "./out/main/index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "lint": "vue-tsc --noEmit --project tsconfig.web.json && vue-tsc --noEmit --project tsconfig.node.json",
-    "package": "electron-vite build && electron-builder --win portable"
+    "package": "electron-vite build && electron-builder --win zip"
   },
   "dependencies": {
     "active-win": "^8.2.1",
@@ -37,10 +37,8 @@
     ],
     "asar": false,
     "win": {
-      "target": "portable"
-    },
-    "portable": {
-      "artifactName": "Futari-${version}-portable.exe"
+      "target": "zip",
+      "artifactName": "Futari-${version}-win32-x64.zip"
     }
   }
 }

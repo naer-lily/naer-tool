@@ -51,6 +51,14 @@
     </select>
   </div>
 
+  <div class="field">
+    <label>
+      <input type="checkbox" id="launchAtStartup" style="width:auto;margin-right:8px">
+      Launch at startup
+    </label>
+    <div class="hint">Automatically start Futari when you log in</div>
+  </div>
+
   <div class="actions">
     <button class="btn btn-primary" id="btn-save">Save</button>
     <button class="btn btn-secondary" id="btn-cancel">Cancel</button>
@@ -64,20 +72,24 @@
   <script>
     var initialShortcut = 'Alt+Space'
     var initialTheme = 'dark'
+    var initialLaunchAtStartup = false
 
     try {
       if (window.location.hash) {
         var data = JSON.parse(decodeURIComponent(window.location.hash.slice(1)))
         if (data.shortcut) initialShortcut = data.shortcut
         if (data.theme) initialTheme = data.theme
+        if (typeof data.launchAtStartup === 'boolean') initialLaunchAtStartup = data.launchAtStartup
       }
     } catch(e) {}
 
     var shortcutEl = document.getElementById('shortcut')
     var themeEl = document.getElementById('theme')
+    var launchEl = document.getElementById('launchAtStartup')
 
     shortcutEl.value = initialShortcut
     themeEl.value = initialTheme
+    launchEl.checked = initialLaunchAtStartup
 
     document.getElementById('btn-save').addEventListener('click', function() {
       var shortcut = shortcutEl.value.trim()
@@ -86,7 +98,7 @@
         shortcutEl.focus()
         return
       }
-      window.futariWeb.close({ shortcut: shortcut, theme: theme })
+      window.futariWeb.close({ shortcut: shortcut, theme: theme, launchAtStartup: launchEl.checked })
     })
 
     document.getElementById('btn-cancel').addEventListener('click', function() {

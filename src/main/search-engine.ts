@@ -2,11 +2,12 @@ import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
-import { logger } from '@main/logger'
+import { logger, createPluginLogger } from '@main/logger'
+import { companionManager } from '@main/companion-manager'
 import { readFileSync, existsSync } from 'fs'
 import { resolve as pathResolve, extname, isAbsolute } from 'path'
 import { clipboard, shell } from 'electron'
-import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext, CommandOutcome } from '@shared/plugin-api'
+import type { SearchResult, SearchResponse, ICommand, IFallbackCommand, CommandContext, CommandOutcome, PluginContext } from '@shared/plugin-api'
 
 export interface ExecuteResult {
   webViewOpened: boolean
@@ -137,7 +138,8 @@ class SearchEngine {
     const plugin = pluginHost.get(pluginId)
     if (!plugin) return []
 
-    const commands = await plugin.buildCommands({})
+    const pluginCtx = this.makePluginContext(pluginId)
+    const commands = await plugin.buildCommands(pluginCtx)
     const results: SearchResult[] = []
 
     for (const cmd of commands) {
@@ -156,7 +158,7 @@ class SearchEngine {
     }
 
     if (plugin.getFallbackCommands) {
-      const fbs = await plugin.getFallbackCommands({})
+      const fbs = await plugin.getFallbackCommands(pluginCtx)
       results.push(...collectFallbackResults(fbs, pluginId, subInput))
     }
 
@@ -211,7 +213,9 @@ class SearchEngine {
         openPath: (path) => shell.openPath(path),
         showItemInFolder: (path) => shell.showItemInFolder(path),
         beep: () => shell.beep()
-      }
+      },
+      companions: companionManager.getHandlesForPlugin(pluginId),
+      log: createPluginLogger(pluginId)
     }
 
     if (plugin.icon) {
@@ -221,7 +225,7 @@ class SearchEngine {
         return original(config)
       }
     }
-    const cmd = await this.resolveCommand(plugin, commandId, input)
+    const cmd = await this.resolveCommand(plugin, commandId, input, pluginId)
     let outcome: CommandOutcome | void = undefined
     if (cmd) {
       outcome = await cmd.execute(ctx)
@@ -241,18 +245,26 @@ class SearchEngine {
     return { webViewOpened: false, shouldClose }
   }
 
-  private async resolveCommand(plugin: { buildCommands(ctx: unknown): Promise<ICommand[]>; getFallbackCommands?(ctx: unknown): Promise<IFallbackCommand[]> }, commandId: string, input: string): Promise<ICommand | null> {
-    const commands = await plugin.buildCommands({})
+  private async resolveCommand(plugin: { buildCommands(ctx: PluginContext): Promise<ICommand[]>; getFallbackCommands?(ctx: PluginContext): Promise<IFallbackCommand[]> }, commandId: string, input: string, pluginId: string): Promise<ICommand | null> {
+    const pluginCtx = this.makePluginContext(pluginId)
+    const commands = await plugin.buildCommands(pluginCtx)
     const direct = commands.find((c: ICommand) => c.id === commandId)
     if (direct) return direct
 
     if (plugin.getFallbackCommands) {
-      const fbs = await plugin.getFallbackCommands({})
+      const fbs = await plugin.getFallbackCommands(pluginCtx)
       const fb = fbs.find((f: IFallbackCommand) => f.id === commandId)
       if (fb) return fb.build(input)
     }
 
     return null
+  }
+
+  private makePluginContext(pluginId: string): PluginContext {
+    return {
+      companions: companionManager.getHandlesForPlugin(pluginId),
+      log: createPluginLogger(pluginId)
+    }
   }
 }
 

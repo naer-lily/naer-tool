@@ -63,7 +63,7 @@ export function registerIpc(): void {
   })
 
   ipcMain.on(IPC.LOG, (_event, payload: { level: string; args: unknown[] }) => {
-    const fn = (logger as Record<string, (...a: unknown[]) => void>)[payload.level]
+    const fn = (logger as unknown as Record<string, (...a: unknown[]) => void>)[payload.level]
     if (fn) {
       fn('[renderer]', ...payload.args)
     }

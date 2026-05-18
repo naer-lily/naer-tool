@@ -22,6 +22,35 @@ export interface FormConfig {
   fields: FormField[]
 }
 
+export interface CompanionConfig {
+  command: string
+  args?: string[]
+  cwd?: string
+  env?: Record<string, string>
+  mode?: 'jsonl' | 'http'
+  http?: {
+    healthPath?: string
+    timeout?: number
+  }
+}
+
+export interface CompanionHandle {
+  pid: number
+  config: CompanionConfig
+  url?: string
+  send(data: unknown): void
+  onMessage(callback: (data: unknown) => void): () => void
+  kill(): void
+}
+
+export interface PluginLogger {
+  error(...args: unknown[]): void
+  warn(...args: unknown[]): void
+  info(...args: unknown[]): void
+  debug(...args: unknown[]): void
+  trace(...args: unknown[]): void
+}
+
 export interface CommandContext {
   input: string
   toast(message: string): void
@@ -41,6 +70,8 @@ export interface CommandContext {
     showItemInFolder(path: string): void
     beep(): void
   }
+  companions: CompanionHandle[]
+  log: PluginLogger
 }
 
 export type CommandResult = void | Promise<void>
@@ -73,7 +104,8 @@ export interface AppInfo {
 }
 
 export interface PluginContext {
-  // Expanded in later phases
+  companions: CompanionHandle[]
+  log: PluginLogger
 }
 
 export interface TrayMenuItem {
@@ -91,10 +123,10 @@ export interface IPlugin {
   onDeactivate(): Promise<void>
 
   buildCommands(ctx: PluginContext): Promise<ICommand[]>
-
   getFallbackCommands?(ctx: PluginContext): Promise<IFallbackCommand[]>
   shouldAutoActivate?(appInfo: AppInfo): boolean
   getTrayItems?(): TrayMenuItem[]
+  companion?: CompanionConfig | CompanionConfig[]
 }
 
 export interface SearchResult {

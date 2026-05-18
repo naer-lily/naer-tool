@@ -6,7 +6,7 @@ import { configManager } from '@main/config'
 async function openSettings(ctx: CommandContext): Promise<void> {
   const htmlPath = join(app.getAppPath(), 'resources', 'settings.html')
   const cfg = configManager.getRaw()
-  const hash = encodeURIComponent(JSON.stringify({ shortcut: cfg.shortcut || 'Alt+Space', theme: cfg.theme || 'dark' }))
+  const hash = encodeURIComponent(JSON.stringify({ shortcut: cfg.shortcut || 'Alt+Space', theme: cfg.theme || 'dark', launchAtStartup: cfg.launchAtStartup || false }))
   const url = `file:///${htmlPath.replace(/\\/g, '/')}#${hash}`
 
   const result = await ctx.openWebView({
@@ -22,10 +22,11 @@ async function openSettings(ctx: CommandContext): Promise<void> {
   const data = result as Record<string, unknown>
   const shortcut = String(data.shortcut || '').trim()
   const theme = (data.theme as 'light' | 'dark') || 'dark'
+  const launchAtStartup = Boolean(data.launchAtStartup)
 
   if (!shortcut) return
 
-  configManager.patch({ shortcut, theme })
+  configManager.patch({ shortcut, theme, launchAtStartup })
   ctx.toast('Settings saved. Restart Futari to apply shortcut changes.')
 }
 

@@ -16,6 +16,64 @@ declare namespace Futari {
     priority?: number
   }
 
+  /** 伴生进程配置 */
+  interface CompanionConfig {
+    /** 可执行文件或脚本路径 (支持任意语言) */
+    command: string
+    /** 命令行参数 */
+    args?: string[]
+    /** 工作目录 */
+    cwd?: string
+    /** 环境变量 (合并到当前环境) */
+    env?: Record<string, string>
+    /**
+     * 通信模式:
+     *   - 'jsonl' (默认): stdin/stdout 走 JSON-line 协议
+     *   - 'http': 启动 HTTP 服务，框架自动分配 PORT 并轮询健康检查
+     */
+    mode?: 'jsonl' | 'http'
+    /** HTTP 模式配置 */
+    http?: {
+      /** 健康检查路径 (默认 /health) */
+      healthPath?: string
+      /** 健康检查超时毫秒 (默认 10000) */
+      timeout?: number
+    }
+  }
+
+  /** 伴生进程句柄 */
+  interface CompanionHandle {
+    /** 进程 ID */
+    pid: number
+    /** 当前配置 */
+    config: CompanionConfig
+    /** HTTP 模式: 框架分配的 URL (如 http://127.0.0.1:12345) */
+    url?: string
+    /** stdio 模式: 发送 JSON 数据到进程 stdin */
+    send(data: unknown): void
+    /** stdio 模式: 监听进程 stdout JSON 消息，返回取消监听函数 */
+    onMessage(callback: (data: unknown) => void): () => void
+    /** 终止进程 */
+    kill(): void
+  }
+
+  /** 插件日志接口 */
+  interface PluginLogger {
+    error(...args: unknown[]): void
+    warn(...args: unknown[]): void
+    info(...args: unknown[]): void
+    debug(...args: unknown[]): void
+    trace(...args: unknown[]): void
+  }
+
+  /** 插件上下文 (传递给 onActivate, buildCommands 等) */
+  interface PluginContext {
+    /** 伴生进程句柄列表 */
+    companions: CompanionHandle[]
+    /** 日志记录器 */
+    log: PluginLogger
+  }
+
   /**
    * 命令执行上下文 — 插件通过 ctx 与 Futari 交互
    *
@@ -68,6 +126,12 @@ declare namespace Futari {
       /** 播放系统提示音 */
       beep(): void
     }
+
+    /** 伴生进程句柄列表 */
+    companions: CompanionHandle[]
+
+    /** 日志记录器 */
+    log: PluginLogger
   }
 
   /** WebView 面板配置 */
@@ -199,10 +263,11 @@ declare namespace Futari {
    *   name: 'My Plugin',
    *   icon: '🔧',
    *   prefix: 'my',
-   *   async onActivate() {},
+   *   companion: { command: './server.exe', args: ['--port', '8080'], mode: 'http' },
+   *   async onActivate(ctx) { ctx.log.info('activated') },
    *   async onDeactivate() {},
-   *   async buildCommands() { return [...] },
-   *   async getFallbackCommands() { return [...] },
+   *   async buildCommands(ctx) { return [...] },
+   *   async getFallbackCommands(ctx) { return [...] },
    *   shouldAutoActivate(appInfo) { return appInfo.name === 'notepad.exe' },
    * }
    * module.exports = plugin
@@ -217,17 +282,19 @@ declare namespace Futari {
     icon: string
     /** 命令前缀 — 用户输入此前缀+空格进入子命令模式 (可选) */
     prefix?: string
+    /** 伴生进程配置 (可选，支持数组) */
+    companion?: CompanionConfig | CompanionConfig[]
 
     /** 插件激活 (加载/重载后) */
-    onActivate(ctx: object): Promise<void>
+    onActivate(ctx: PluginContext): Promise<void>
     /** 插件停用 (卸载/重载前) */
     onDeactivate(): Promise<void>
 
     /** 返回子命令列表 (用户输入前缀后调用一次) */
-    buildCommands(ctx: object): Promise<ICommand[]>
+    buildCommands(ctx: PluginContext): Promise<ICommand[]>
 
     /** 返回全局回退命令列表 (可选，有 prefix 的插件也可以提供) */
-    getFallbackCommands?(ctx: object): Promise<IFallbackCommand[]>
+    getFallbackCommands?(ctx: PluginContext): Promise<IFallbackCommand[]>
 
     /**
      * 窗口显示时检查前台窗口，决定是否自动进入子命令模式 (可选)

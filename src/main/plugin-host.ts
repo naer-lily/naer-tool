@@ -1,8 +1,25 @@
 import { readdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
-import type { IPlugin, IFallbackCommand, ICommand } from '@shared/plugin-api'
-import { logger } from '@main/logger'
+import type { IPlugin, IFallbackCommand, ICommand, PluginContext, CompanionConfig, CompanionHandle } from '@shared/plugin-api'
+import { logger, createPluginLogger } from '@main/logger'
+import { companionManager } from '@main/companion-manager'
+
+function buildPluginContext(pluginId: string): PluginContext {
+  return {
+    companions: companionManager.getHandlesForPlugin(pluginId),
+    log: createPluginLogger(pluginId)
+  }
+}
+
+async function startCompanions(pluginId: string, configs: CompanionConfig[]): Promise<CompanionHandle[]> {
+  try {
+    return await companionManager.startForPlugin(pluginId, configs)
+  } catch (e) {
+    logger.error('[PluginHost] companion start failed for %s:', pluginId, e)
+    return []
+  }
+}
 
 const PLUGINS_DIR = join(homedir(), '.futari', 'plugins')
 
@@ -35,7 +52,15 @@ class PluginHost {
       await this.unload(plugin.id)
     }
 
-    await plugin.onActivate({})
+    const ctx = buildPluginContext(plugin.id)
+    await plugin.onActivate(ctx)
+
+    if (plugin.companion) {
+      const configs = Array.isArray(plugin.companion) ? plugin.companion : [plugin.companion]
+      const handles = await startCompanions(plugin.id, configs)
+      ctx.companions = handles
+    }
+
     this.plugins.set(plugin.id, plugin)
     this.pluginPaths.set(plugin.id, pluginPath)
     logger.info('[PluginHost] loaded: %s (%s)', plugin.id, pluginPath)
@@ -46,6 +71,7 @@ class PluginHost {
     const plugin = this.plugins.get(pluginId)
     if (!plugin) return
 
+    companionManager.stopForPlugin(pluginId)
     await plugin.onDeactivate()
     this.plugins.delete(pluginId)
 
@@ -99,11 +125,25 @@ class PluginHost {
     this.pluginPaths.set(id, `builtin:${id}`)
   }
 
+  async activateBuiltin(plugin: IPlugin, id: string): Promise<void> {
+    if (!this.plugins.has(id)) {
+      this.registerBuiltin(plugin, id)
+    }
+    const ctx = buildPluginContext(id)
+    await plugin.onActivate(ctx)
+    if (plugin.companion) {
+      const configs = Array.isArray(plugin.companion) ? plugin.companion : [plugin.companion]
+      const handles = await startCompanions(id, configs)
+      ctx.companions = handles
+    }
+  }
+
   async getFallbackCommands(): Promise<{ pluginId: string; cmd: IFallbackCommand }[]> {
     const result: { pluginId: string; cmd: IFallbackCommand }[] = []
     for (const [pluginId, plugin] of this.plugins) {
       if (plugin.getFallbackCommands) {
-        const cmds = await plugin.getFallbackCommands({})
+        const ctx = buildPluginContext(pluginId)
+        const cmds = await plugin.getFallbackCommands(ctx)
         for (const cmd of cmds) {
           result.push({ pluginId, cmd })
         }
