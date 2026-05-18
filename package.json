@@ -34,9 +34,9 @@
       "resources/**/*",
       "package.json"
     ],
+    "asar": false,
     "win": {
-      "target": "portable",
-      "icon": null
+      "target": "portable"
     },
     "portable": {
       "artifactName": "Futari-${version}-portable.exe"
