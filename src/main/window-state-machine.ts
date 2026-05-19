@@ -6,7 +6,6 @@ import { configManager } from '@main/config'
 import { logger } from '@main/logger'
 import type { AppInfo } from '@shared/plugin-api'
 
-const BASE_WIN_WIDTH = 680
 const BASE_WIN_HEIGHT = 400
 const BASE_SEARCH_HEIGHT = 64
 const OFFSCREEN_X = -9999
@@ -20,6 +19,7 @@ class WindowStateMachine {
   private expandedHeight = 0
   private _scale = 1.0
   private _windowTopRatio = 0.12
+  private _baseWinWidth = 800
 
   get state(): WindowState {
     return this._state
@@ -42,7 +42,7 @@ class WindowStateMachine {
   }
 
   get scaledWinWidth(): number {
-    return Math.round(BASE_WIN_WIDTH * this._scale)
+    return Math.round(this._baseWinWidth * this._scale)
   }
 
   get scaledWinHeight(): number {
@@ -53,11 +53,20 @@ class WindowStateMachine {
     return Math.round(BASE_SEARCH_HEIGHT * this._scale)
   }
 
+  get scaledContainerWidth(): number {
+    return this.scaledWinWidth - Math.round(32 * this._scale)
+  }
+
+  get scaledContainerX(): number {
+    return Math.round(16 * this._scale)
+  }
+
   // ═══════════════════════════════════════
   // 初始化
   // ═══════════════════════════════════════
 
   create(): void {
+    this._baseWinWidth = configManager.getWindowWidth()
     this._scale = configManager.getScale()
     this._windowTopRatio = configManager.getWindowTopRatio()
 

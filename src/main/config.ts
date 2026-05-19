@@ -9,6 +9,7 @@ export interface FutariConfig {
   theme?: 'light' | 'dark'
   launchAtStartup?: boolean
   windowTopRatio?: number
+  windowWidth?: number
   scale?: number
   lastUpdateCheck?: number
   skipVersion?: string
@@ -30,6 +31,7 @@ class ConfigManager {
         theme: 'dark',
         launchAtStartup: false,
         windowTopRatio: 0.12,
+        windowWidth: 800,
         scale: 1.0
       }
       this.config = defaults
@@ -87,6 +89,11 @@ class ConfigManager {
   getScale(): number {
     const s = this.config.scale ?? 1.0
     return Math.max(0.5, Math.min(2.0, s))
+  }
+
+  getWindowWidth(): number {
+    const w = this.config.windowWidth ?? 800
+    return Math.max(500, Math.min(1200, w))
   }
 }
 

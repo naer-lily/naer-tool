@@ -103,7 +103,7 @@ onMounted(() => {
 <style scoped>
 .search-container {
   position: relative;
-  width: 648px;
+  width: calc(100vw - 32px);
   background: var(--bg-primary);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);

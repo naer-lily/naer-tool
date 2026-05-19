@@ -18,13 +18,14 @@ async function openSettings(ctx: CommandContext): Promise<void> {
     theme: cfg.theme || 'dark',
     launchAtStartup: cfg.launchAtStartup || false,
     windowTopRatio: cfg.windowTopRatio ?? 0.12,
-    scale: cfg.scale ?? 1.0
+    scale: cfg.scale ?? 1.0,
+    windowWidth: cfg.windowWidth ?? 800
   }))
   const url = `file:///${htmlPath.replace(/\\/g, '/')}#${hash}`
 
   const result = await ctx.openWebView({
     url,
-    height: 440,
+    height: 480,
     injectBaseStyles: true
   })
 
@@ -38,10 +39,11 @@ async function openSettings(ctx: CommandContext): Promise<void> {
   const launchAtStartup = Boolean(data.launchAtStartup)
   const windowTopRatio = typeof data.windowTopRatio === 'number' ? data.windowTopRatio : 0.12
   const scale = typeof data.scale === 'number' ? data.scale : 1.0
+  const windowWidth = typeof data.windowWidth === 'number' ? data.windowWidth : 800
 
   if (!shortcut) return
 
-  configManager.patch({ shortcut, theme, launchAtStartup, windowTopRatio, scale })
+  configManager.patch({ shortcut, theme, launchAtStartup, windowTopRatio, scale, windowWidth })
 
   windowStateMachine.applyScale(scale)
 

@@ -9,7 +9,6 @@ import type { WebViewConfig } from '@shared/web-view-api'
 const RESOURCES_DIR = join(__dirname, '..', '..', 'resources')
 const BUILTIN_PRELOAD = join(RESOURCES_DIR, 'web-view-preload.js')
 
-const BASE_CONTAINER_WIDTH = 648
 const BASE_SEARCH_HEIGHT = 64
 const BASE_BOTTOM_SHADOW_SPACE = 16
 
@@ -84,11 +83,11 @@ class WebViewManager {
   }
 
   private get containerWidth(): number {
-    return Math.round(BASE_CONTAINER_WIDTH * this.s)
+    return windowStateMachine.scaledContainerWidth
   }
 
   private get containerX(): number {
-    return Math.round((windowStateMachine.scaledWinWidth - this.containerWidth) / 2)
+    return windowStateMachine.scaledContainerX
   }
 
   private get searchHeight(): number {
