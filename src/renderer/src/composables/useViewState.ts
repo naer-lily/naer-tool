@@ -140,7 +140,6 @@ function createViewState() {
       query.value = ''
       results.value = response.results
       activeIndex.value = 0
-      if (await autoExecuteIfSingle()) return
     } else {
       results.value = response.results
       activeIndex.value = 0
