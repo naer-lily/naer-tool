@@ -372,7 +372,7 @@ This gives plugins full control: a WebView that completed successfully can still
 **Solution**: NEVER call `win.hide()` (causes Windows show/hide animation flash). Instead:
 ```
 hideWindow(): setOpacity(0) → setPosition(-9999, -9999)
-showWindow(): centerAtTop() → setOpacity(0) → show() → focus() → setImmediate(() => setOpacity(1))
+showWindow(): setOpacity(0) → show() → focus() → setImmediate(applyBounds + setOpacity(1))
 ```
 - Window is always "shown" (never hidden), just moved off-screen when not needed
 - DWM ignores windows whose rectangles don't overlap the visible desktop — no composition interference

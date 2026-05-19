@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { searchEngine } from '@main/search-engine'
 import { hideWindow, getMainWindow } from '@main/window-manager'
+import { windowStateMachine } from '@main/window-state-machine'
 import { showScreenToast } from '@main/toast'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
@@ -60,6 +61,10 @@ export function registerIpc(): void {
 
   ipcMain.on(IPC.WEB_VIEW_MESSAGE, (_event, data: unknown) => {
     webViewManager.handleMessage(data)
+  })
+
+  ipcMain.on(IPC.RESIZE_WINDOW, (_event, height: number) => {
+    windowStateMachine.adjustHeight(height)
   })
 
   ipcMain.on(IPC.LOG, (_event, payload: { level: string; args: unknown[] }) => {

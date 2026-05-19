@@ -81,6 +81,10 @@ const api = {
 
   log: (level: string, ...args: unknown[]): void => {
     ipcRenderer.send(IPC.LOG, { level, args })
+  },
+
+  resizeWindow: (height: number): void => {
+    ipcRenderer.send(IPC.RESIZE_WINDOW, height)
   }
 }
 

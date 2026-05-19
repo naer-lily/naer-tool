@@ -1,5 +1,5 @@
 <template>
-  <div class="search-container" :class="{ 'webview-mode': webviewActive }">
+  <div ref="containerRef" class="search-container" :class="{ 'webview-mode': webviewActive }">
     <div class="header">
       <SearchInput
         ref="searchInputRef"
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import SearchInput from '@/components/SearchInput.vue'
 import ResultList from '@/components/ResultList.vue'
 import { useSearch } from '@/composables/useSearch'
@@ -55,6 +55,8 @@ const {
 } = useSearch()
 
 const searchInputRef = ref<InstanceType<typeof SearchInput> | null>(null)
+const containerRef = ref<HTMLElement | null>(null)
+let resizeObserver: ResizeObserver | null = null
 const isModeImg = computed(() => /^(data:image|https?:)/.test(activePluginIcon.value || ''))
 
 const { onKeydown: navKeydown } = useKeyboardNav({
@@ -93,6 +95,20 @@ onMounted(() => {
   window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
     handleAutoActivate(pluginId, icon)
   })
+
+  resizeObserver = new ResizeObserver(() => {
+    if (containerRef.value && !webviewActive.value) {
+      const h = containerRef.value.getBoundingClientRect().height + 16
+      window.futariAPI.resizeWindow(h)
+    }
+  })
+  if (containerRef.value) {
+    resizeObserver.observe(containerRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
 })
 </script>
 
@@ -111,6 +127,7 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: var(--shadow);
   overflow: hidden;
+  padding-bottom: 16px;
 }
 
 .search-container.webview-mode {
@@ -118,6 +135,7 @@ onMounted(() => {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .search-container.webview-mode .header {

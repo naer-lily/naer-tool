@@ -14,6 +14,7 @@ export interface FutariAPI {
   onHideWebView(cb: () => void): () => void
   onWebViewReady(cb: () => void): () => void
   log(level: string, ...args: unknown[]): void
+  resizeWindow(height: number): void
 }
 
 declare global {

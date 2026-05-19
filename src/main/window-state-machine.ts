@@ -172,8 +172,14 @@ class WindowStateMachine {
     logger.trace('[WSM] endWebView → shown')
     this._state = 'shown'
     this.expandedHeight = 0
+  }
 
-    this.setWindowSize(this.scaledWinWidth, this.scaledWinHeight)
+  adjustHeight(rendererHeight: number): void {
+    if (this._state !== 'shown') return
+    if (!this.win) return
+    const scaled = Math.round(rendererHeight * this._scale)
+    const b = this.win.getBounds()
+    this.win.setBounds({ x: b.x, y: b.y, width: b.width, height: scaled })
   }
 
   resizeExpanded(totalHeight: number): void {
@@ -207,14 +213,18 @@ class WindowStateMachine {
   private applyBounds(): void {
     if (!this.win) return
     const w = this.scaledWinWidth
-    const h = this._state === 'expanded'
-      ? Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
-      : this.scaledWinHeight
     const cursor = screen.getCursorScreenPoint()
-    const bounds = screen.getDisplayNearestPoint(cursor).workArea
-    const x = Math.round(bounds.x + (bounds.width - w) / 2)
-    const y = Math.round(bounds.y + bounds.height * this._windowTopRatio)
-    this.win.setBounds({ x, y, width: w, height: h })
+    const display = screen.getDisplayNearestPoint(cursor).workArea
+    const x = Math.round(display.x + (display.width - w) / 2)
+    const y = Math.round(display.y + display.height * this._windowTopRatio)
+
+    if (this._state === 'expanded') {
+      const h = Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
+      this.win.setBounds({ x, y, width: w, height: h })
+    } else {
+      const b = this.win.getBounds()
+      this.win.setBounds({ x, y, width: w, height: b.height })
+    }
   }
 
   private setWindowSize(w: number, h: number): void {

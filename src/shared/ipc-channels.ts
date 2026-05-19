@@ -15,4 +15,5 @@ export const IPC = {
   LOG: 'log',
   GET_CONFIG: 'get-config',
   SET_CONFIG: 'set-config',
+  RESIZE_WINDOW: 'resize-window',
 } as const
