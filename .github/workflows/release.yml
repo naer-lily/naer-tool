@@ -28,3 +28,7 @@ jobs:
         with:
           files: dist/Futari-*-win32-x64.zip
           generate_release_notes: true
+          body: |
+            **Futari ${{ github.ref_name }}**
+            
+            双击运行，右键托盘图标可检查更新。安装后通过 `Alt+Space` 呼出启动器。
