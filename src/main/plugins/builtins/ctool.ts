@@ -6,16 +6,10 @@ const getHtmlPath = (): string => {
   return join(app.getAppPath(), 'resources', 'ctool', 'index.html')
 }
 
-const getPreloadPath = (): string => {
-  return join(app.getAppPath(), 'resources', 'ctool-preload.js')
-}
-
 async function openCtool(ctx: CommandContext): Promise<void> {
   const htmlPath = getHtmlPath()
-  const preload = getPreloadPath()
   await ctx.openWebView({
     htmlPath,
-    preload,
     height: 520
   })
 }
