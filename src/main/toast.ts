@@ -34,7 +34,8 @@ export function showScreenToast(message: string): void {
     hideTimer = null
   }
 
-  const bounds = screen.getPrimaryDisplay().workArea
+  const cursor = screen.getCursorScreenPoint()
+  const bounds = screen.getDisplayNearestPoint(cursor).workArea
   const x = Math.round(bounds.x + (bounds.width - 360) / 2)
   const y = Math.round(bounds.y + bounds.height - 80)
   toastWindow.setPosition(x, y)
