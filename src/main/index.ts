@@ -13,12 +13,14 @@ import calculatorPlugin from '@main/plugins/builtins/calculator'
 import runPlugin from '@main/plugins/builtins/run'
 import pluginCreator from '@main/plugins/builtins/plugin-creator'
 import settingsPlugin from '@main/plugins/builtins/settings'
+import ctoolPlugin from '@main/plugins/builtins/ctool'
 
 async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(calculatorPlugin, 'calculator')
   await pluginHost.activateBuiltin(runPlugin, 'run')
   await pluginHost.activateBuiltin(pluginCreator, 'plugin-creator')
   await pluginHost.activateBuiltin(settingsPlugin, 'settings')
+  await pluginHost.activateBuiltin(ctoolPlugin, 'ctool')
 }
 
 async function loadUserPlugins(): Promise<void> {
