@@ -217,7 +217,8 @@ class WindowStateMachine {
 
   private centerAtTop(): void {
     if (!this.win) return
-    const bounds = screen.getPrimaryDisplay().workArea
+    const cursor = screen.getCursorScreenPoint()
+    const bounds = screen.getDisplayNearestPoint(cursor).workArea
     const w = this.scaledWinWidth
     const x = Math.round(bounds.x + (bounds.width - w) / 2)
     const y = Math.round(bounds.y + bounds.height * this._windowTopRatio)
