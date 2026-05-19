@@ -79,7 +79,6 @@ class WindowStateMachine {
       show: false,
       resizable: false,
       skipTaskbar: true,
-      center: true,
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         sandbox: false
@@ -112,29 +111,22 @@ class WindowStateMachine {
 
     logger.trace('[WSM] show')
     this._state = this.expandedHeight > 0 ? 'expanded' : 'shown'
-    this.centerAtTop()
-
-    const w = this.scaledWinWidth
-    const h = this._state === 'expanded'
-      ? Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
-      : this.scaledWinHeight
-    this.win.setSize(w, h)
 
     const activated = this.checkAutoActivate()
-    if (activated) {
-      logger.trace('[WSM] auto-activate plugin=%s', activated.pluginId)
-      this.win.webContents.send('auto-activate', activated.pluginId, activated.icon)
-    }
 
     this.win.setOpacity(0)
     this.win.show()
     this.win.focus()
 
-    if (!activated) {
+    if (activated) {
+      logger.trace('[WSM] auto-activate plugin=%s', activated.pluginId)
+      this.win.webContents.send('auto-activate', activated.pluginId, activated.icon)
+    } else {
       this.win.webContents.send('focus-input')
     }
 
     setImmediate(() => {
+      this.applyBounds()
       this.win?.setOpacity(1)
     })
   }
@@ -169,10 +161,9 @@ class WindowStateMachine {
     this._state = 'expanded'
     this.expandedHeight = height
 
-    if (this.win) {
-      const totalHeight = Math.round((BASE_SEARCH_HEIGHT + height) * this._scale)
-      this.win.setSize(this.scaledWinWidth, totalHeight)
-    }
+    const w = this.scaledWinWidth
+    const h = Math.round((BASE_SEARCH_HEIGHT + height) * this._scale)
+    this.setWindowSize(w, h)
   }
 
   endWebView(): void {
@@ -182,15 +173,13 @@ class WindowStateMachine {
     this._state = 'shown'
     this.expandedHeight = 0
 
-    if (this.win) {
-      this.win.setSize(this.scaledWinWidth, this.scaledWinHeight)
-    }
+    this.setWindowSize(this.scaledWinWidth, this.scaledWinHeight)
   }
 
   resizeExpanded(totalHeight: number): void {
     if (!this.win || this._state !== 'expanded') return
     this.expandedHeight = Math.round(totalHeight / this._scale) - BASE_SEARCH_HEIGHT
-    this.win.setSize(this.scaledWinWidth, totalHeight)
+    this.setWindowSize(this.scaledWinWidth, totalHeight)
   }
 
   applyScale(newScale: number): void {
@@ -205,17 +194,34 @@ class WindowStateMachine {
     this.win.webContents.setZoomFactor(this._scale)
 
     const w = this.scaledWinWidth
-    if (this._state === 'expanded') {
-      const totalHeight = Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
-      this.win.setSize(w, totalHeight)
-    } else {
-      this.win.setSize(w, this.scaledWinHeight)
-    }
+    const h = this._state === 'expanded'
+      ? Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
+      : this.scaledWinHeight
+    this.setWindowSize(w, h)
   }
 
   // ═══════════════════════════════════════
   // 内部
   // ═══════════════════════════════════════
+
+  private applyBounds(): void {
+    if (!this.win) return
+    const w = this.scaledWinWidth
+    const h = this._state === 'expanded'
+      ? Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
+      : this.scaledWinHeight
+    const cursor = screen.getCursorScreenPoint()
+    const bounds = screen.getDisplayNearestPoint(cursor).workArea
+    const x = Math.round(bounds.x + (bounds.width - w) / 2)
+    const y = Math.round(bounds.y + bounds.height * this._windowTopRatio)
+    this.win.setBounds({ x, y, width: w, height: h })
+  }
+
+  private setWindowSize(w: number, h: number): void {
+    if (!this.win) return
+    const b = this.win.getBounds()
+    this.win.setBounds({ x: b.x, y: b.y, width: w, height: h })
+  }
 
   private centerAtTop(): void {
     if (!this.win) return
