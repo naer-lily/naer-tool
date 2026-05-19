@@ -108,14 +108,6 @@ function createViewState() {
 
   // ── External actions (side effects, dispatched by consumer) ──
 
-  async function autoExecuteIfSingle(): Promise<boolean> {
-    if (results.value.length === 1 && !results.value[0].prefixEntry) {
-      await selectResult(0)
-      return true
-    }
-    return false
-  }
-
   async function doSearch(): Promise<void> {
     const s = state.value
 
@@ -129,7 +121,6 @@ function createViewState() {
     if (s.id === 'subcommand') {
       results.value = (await window.futariAPI.search(text, s.pluginId)).results
       activeIndex.value = 0
-      if (await autoExecuteIfSingle()) return
       return
     }
 
@@ -151,7 +142,6 @@ function createViewState() {
     query.value = ''
     results.value = (await window.futariAPI.search('', pluginId)).results
     activeIndex.value = 0
-    if (await autoExecuteIfSingle()) return
   }
 
   function exitSubcommand(): void {
