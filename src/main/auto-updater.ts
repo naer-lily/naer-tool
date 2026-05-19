@@ -217,6 +217,8 @@ Log "Updater exiting"`
       const logDirOk = existsSync(logDir)
       logger.info('[Updater] script written path=%s size=%d logDir=%s exists=%s', scriptPath, scriptSize, logDir, logDirOk)
       const spawnArgs = [
+        '/c', 'start', '', '/min',
+        'powershell',
         '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
         '-File', scriptPath,
         '-OldDir', appDir,
@@ -225,10 +227,12 @@ Log "Updater exiting"`
         '-LogFile', UPDATE_LOG,
         '-Pid', String(process.pid)
       ]
-      logger.info('[Updater] spawn args: powershell %s', spawnArgs.map((a, i) => `${i}:${a}`).join(' '))
-      logger.info('[Updater] launching updater script, appDir=%s log=%s', appDir, UPDATE_LOG)
+      logger.info('[Updater] spawn args: cmd %s', spawnArgs.map((a, i) => `${i}:${a}`).join(' '))
+      logger.info('[Updater] launching updater via cmd /c start, appDir=%s log=%s', appDir, UPDATE_LOG)
 
-      const cp: ChildProcess = spawn('powershell', spawnArgs, { detached: true, stdio: 'ignore' })
+      // Use cmd /c start to launch PowerShell — 'start' creates a truly independent process.
+      // Direct spawn('powershell', ..., { detached: true }) prevents -File scripts from executing.
+      const cp: ChildProcess = spawn('cmd', spawnArgs, { detached: true, stdio: 'ignore' })
 
       if (cp.pid) {
         logger.info('[Updater] child spawned pid=%d', cp.pid)
