@@ -154,7 +154,7 @@ $OldDir = '${appDir.replace(/'/g, "''")}'
 $NewDir = '${extractDir.replace(/'/g, "''")}'
 $Exe = '${exePath.replace(/'/g, "''")}'
 $LogFile = '${UPDATE_LOG.replace(/'/g, "''")}'
-$Pid = ${process.pid}
+$ParentPid = ${process.pid}
 
 $ErrorActionPreference = 'Stop'
 
@@ -169,9 +169,9 @@ trap {
   exit 1
 }
 
-Log "Updater started OldDir=$OldDir NewDir=$NewDir Exe=$Exe Pid=$Pid"
+Log "Updater started OldDir=$OldDir NewDir=$NewDir Exe=$Exe ParentPid=$ParentPid"
 Start-Sleep 3
-try { Wait-Process -Id $Pid -ErrorAction SilentlyContinue } catch {
+try { Wait-Process -Id $ParentPid -ErrorAction SilentlyContinue } catch {
   Log "Wait-Process error: $_"
 }
 Start-Sleep 1
