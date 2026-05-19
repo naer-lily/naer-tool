@@ -114,10 +114,11 @@ class WindowStateMachine {
     this._state = this.expandedHeight > 0 ? 'expanded' : 'shown'
     this.centerAtTop()
 
-    if (this.expandedHeight > 0) {
-      const totalHeight = Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
-      this.win.setSize(this.scaledWinWidth, totalHeight)
-    }
+    const w = this.scaledWinWidth
+    const h = this._state === 'expanded'
+      ? Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
+      : this.scaledWinHeight
+    this.win.setSize(w, h)
 
     const activated = this.checkAutoActivate()
     if (activated) {
@@ -126,7 +127,6 @@ class WindowStateMachine {
     }
 
     this.win.setOpacity(0)
-    this.win.setIgnoreMouseEvents(false)
     this.win.show()
     this.win.focus()
 
@@ -145,7 +145,6 @@ class WindowStateMachine {
     logger.trace('[WSM] hide state=%s reason=%s', this._state, reason || '?')
     this._state = 'idle'
     this.win.setOpacity(0)
-    this.win.setIgnoreMouseEvents(true, { forward: true })
     this.win.setPosition(OFFSCREEN_X, OFFSCREEN_Y)
   }
 

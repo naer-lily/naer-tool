@@ -180,14 +180,14 @@ class WebViewManager {
   close(webViewData?: unknown): void {
     logger.trace('[WVM] close called data=%o', webViewData)
 
-    windowStateMachine.endWebView()
-    const mainWin = windowStateMachine.browserWindow
     const resolveData = webViewData !== undefined ? webViewData : this.lastMessage
 
     if (this.view) {
-      try { mainWin?.contentView.removeChildView(this.view) } catch { /* ignore */ }
+      try { windowStateMachine.browserWindow?.contentView.removeChildView(this.view) } catch { /* ignore */ }
       this.view = null
     }
+
+    windowStateMachine.endWebView()
 
     cleanupTempPreload()
 
