@@ -149,17 +149,12 @@ class AutoUpdaterManager {
       const appDir = dirname(exePath)
 
       const scriptPath = join(tmpDir, 'updater.ps1')
-      const UPDATE_DEBUG_LOG = join(homedir(), '.futari', 'updater-debug.log')
       const script = `\
-param([string]$OldDir,[string]$NewDir,[string]$Exe,[string]$LogFile,[int]$Pid)
-
-# DEBUG: write to fixed path to verify script body executes
-try {
-  $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
-  "$ts DEBUG script entered OldDir=$OldDir NewDir=$NewDir Exe=$Exe LogFile=$LogFile Pid=$Pid" | Out-File -FilePath '${UPDATE_DEBUG_LOG.replace(/\\/g, '\\\\')}' -Append -Encoding utf8
-} catch {
-  try { $_ | Out-File -FilePath '${UPDATE_DEBUG_LOG.replace(/\\/g, '\\\\')}' -Append -Encoding utf8 } catch {}
-}
+$OldDir = '${appDir.replace(/'/g, "''")}'
+$NewDir = '${extractDir.replace(/'/g, "''")}'
+$Exe = '${exePath.replace(/'/g, "''")}'
+$LogFile = '${UPDATE_LOG.replace(/'/g, "''")}'
+$Pid = ${process.pid}
 
 $ErrorActionPreference = 'Stop'
 
@@ -224,17 +219,12 @@ Log "Updater exiting"`
       const scriptSize = statSync(scriptPath).size
       const logDir = dirname(UPDATE_LOG)
       const logDirOk = existsSync(logDir)
-      logger.info('[Updater] script written path=%s size=%d logDir=%s exists=%s debugLog=%s', scriptPath, scriptSize, logDir, logDirOk, UPDATE_DEBUG_LOG)
+      logger.info('[Updater] script written path=%s size=%d logDir=%s exists=%s', scriptPath, scriptSize, logDir, logDirOk)
       const spawnArgs = [
         '/c', 'start', '', '/min',
         'powershell',
         '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
-        '-File', scriptPath,
-        '-OldDir', appDir,
-        '-NewDir', extractDir,
-        '-Exe', exePath,
-        '-LogFile', UPDATE_LOG,
-        '-Pid', String(process.pid)
+        '-File', scriptPath
       ]
       logger.info('[Updater] spawn args: cmd %s', spawnArgs.map((a, i) => `${i}:${a}`).join(' '))
       logger.info('[Updater] launching updater via cmd /c start, appDir=%s log=%s', appDir, UPDATE_LOG)

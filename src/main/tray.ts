@@ -1,8 +1,5 @@
 import { app, Tray, Menu, nativeImage, dialog } from 'electron'
 import { join } from 'path'
-import { existsSync, unlinkSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
-import { spawn } from 'child_process'
 import { toggleWindow } from '@main/window-manager'
 import { showScreenToast } from '@main/toast'
 import { autoUpdater } from '@main/auto-updater'
@@ -45,7 +42,6 @@ function rebuildMenu(): void {
       click: () => { void handleUpdateClick() }
     },
     { type: 'separator' },
-    { label: '测试 quit-杀进程', click: () => { void testQuitKill() } },
     { label: '退出', click: () => app.quit() }
   ]
   tray.setContextMenu(Menu.buildFromTemplate(template))
@@ -113,57 +109,6 @@ async function handleUpdateClick(): Promise<void> {
       detail: `当前版本: v${info.currentVersion}`
     })
   }
-}
-
-const QUIT_TEST_FILE = join(homedir(), '.futari', 'quit-test-result.txt')
-
-async function testQuitKill(): Promise<void> {
-  logger.info('[Tray] quit-kill test starting...')
-
-  const tmpDir = join(homedir(), '.futari')
-  const scriptPath = join(tmpDir, 'quit-test.ps1')
-
-  writeFileSync(scriptPath, `\
-$ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
-"$ts quit-test OK" | Out-File -FilePath '${QUIT_TEST_FILE.replace(/\\/g, '\\\\')}' -Append -Encoding utf8
-`, 'utf-8')
-
-  // cleanup previous result
-  try { unlinkSync(QUIT_TEST_FILE) } catch { /* ok */ }
-
-  // Test A: cmd /c start WITHOUT quit
-  await new Promise<void>((resolve) => {
-    const cp = spawn('cmd', [
-      '/c', 'start', '', '/min',
-      'powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
-      '-File', scriptPath
-    ], { detached: true, stdio: 'ignore' })
-    cp.on('exit', () => {
-      setTimeout(() => {
-        const ok = existsSync(QUIT_TEST_FILE)
-        logger.info('[Tray] testA (no quit): file exists=%s', ok)
-        resolve()
-      }, 2000)
-    })
-  })
-
-  // cleanup
-  try { unlinkSync(QUIT_TEST_FILE) } catch { /* ok */ }
-
-  // Test B: cmd /c start THEN app.quit() — file at ~/.futari/quit-test-result.txt
-  // Check it after Futari restarts
-  spawn('cmd', [
-    '/c', 'start', '', '/min',
-    'powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
-    '-File', scriptPath
-  ], { detached: true, stdio: 'ignore' }).unref()
-
-  logger.info('[Tray] testB (WITH quit): spawned, quitting in 2s. Check %s after restart', QUIT_TEST_FILE)
-
-  setTimeout(() => {
-    logger.info('[Tray] testB: calling app.quit()')
-    app.quit()
-  }, 2000)
 }
 
 export function setUpdateAvailable(version: string): void {
