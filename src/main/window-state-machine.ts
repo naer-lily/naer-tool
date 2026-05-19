@@ -111,8 +111,13 @@ class WindowStateMachine {
     if (!this.win || this._state !== 'idle') return
 
     logger.trace('[WSM] show')
-    this._state = 'shown'
+    this._state = this.expandedHeight > 0 ? 'expanded' : 'shown'
     this.centerAtTop()
+
+    if (this.expandedHeight > 0) {
+      const totalHeight = Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
+      this.win.setSize(this.scaledWinWidth, totalHeight)
+    }
 
     const activated = this.checkAutoActivate()
     if (activated) {
@@ -139,7 +144,6 @@ class WindowStateMachine {
 
     logger.trace('[WSM] hide state=%s reason=%s', this._state, reason || '?')
     this._state = 'idle'
-    this.expandedHeight = 0
     this.win.setOpacity(0)
     this.win.setIgnoreMouseEvents(true, { forward: true })
     this.win.setPosition(OFFSCREEN_X, OFFSCREEN_Y)
@@ -154,7 +158,7 @@ class WindowStateMachine {
   }
 
   beginWebView(): void {
-    if (this._state !== 'shown') return
+    if (this._state !== 'shown' && this._state !== 'expanded') return
     logger.trace('[WSM] beginWebView → setup')
     this._state = 'setup'
   }
@@ -168,9 +172,7 @@ class WindowStateMachine {
 
     if (this.win) {
       const totalHeight = Math.round((BASE_SEARCH_HEIGHT + height) * this._scale)
-      this.win.setResizable(true)
       this.win.setSize(this.scaledWinWidth, totalHeight)
-      this.win.setResizable(false)
     }
   }
 
@@ -182,18 +184,14 @@ class WindowStateMachine {
     this.expandedHeight = 0
 
     if (this.win) {
-      this.win.setResizable(true)
       this.win.setSize(this.scaledWinWidth, this.scaledWinHeight)
-      this.win.setResizable(false)
     }
   }
 
   resizeExpanded(totalHeight: number): void {
     if (!this.win || this._state !== 'expanded') return
     this.expandedHeight = Math.round(totalHeight / this._scale) - BASE_SEARCH_HEIGHT
-    this.win.setResizable(true)
     this.win.setSize(this.scaledWinWidth, totalHeight)
-    this.win.setResizable(false)
   }
 
   applyScale(newScale: number): void {
@@ -210,13 +208,9 @@ class WindowStateMachine {
     const w = this.scaledWinWidth
     if (this._state === 'expanded') {
       const totalHeight = Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
-      this.win.setResizable(true)
       this.win.setSize(w, totalHeight)
-      this.win.setResizable(false)
     } else {
-      this.win.setResizable(true)
       this.win.setSize(w, this.scaledWinHeight)
-      this.win.setResizable(false)
     }
   }
 
