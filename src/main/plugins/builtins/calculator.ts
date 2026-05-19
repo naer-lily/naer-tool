@@ -37,7 +37,7 @@ const calculatorPlugin: IPlugin = {
       if (!result) {
         return { preview: `无法计算: ${trimmed}` }
       }
-      return { preview: `= ${result}` }
+      return { preview: `${result} = ${trimmed}` }
     },
     execute(ctx: CommandContext): void {
       const result = safeEval(ctx.input.trim())

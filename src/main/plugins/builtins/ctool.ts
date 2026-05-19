@@ -19,22 +19,13 @@ const ctoolPlugin: IPlugin = {
   name: 'CTool',
   icon: '\u{1F6E0}\uFE0F',
 
-  prefix: 'ct',
+  prefix: '',
 
   async onActivate() {},
   async onDeactivate() {},
 
-  async buildCommands(_ctx: PluginContext, input: string): Promise<ICommand[]> {
-    const trimmed = input.trim()
-    return [{
-      id: 'open',
-      name: '打开 CTool',
-      icon: '\u{1F6E0}\uFE0F',
-      preview: trimmed
-        ? `搜索 CTool 工具: ${trimmed}`
-        : '哈希/加解密/格式化/二维码/时间戳/UUID/进制转换/正则/JSON...',
-      execute: openCtool
-    }]
+  async buildCommands(_ctx: PluginContext, _input: string): Promise<ICommand[]> {
+    return []
   },
 
   async getFallbackCommands(_ctx: PluginContext, input: string): Promise<ICommand[]> {
