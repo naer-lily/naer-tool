@@ -2,12 +2,13 @@ import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import activeWin from 'active-win'
 import { pluginHost } from '@main/plugin-host'
+import { configManager } from '@main/config'
 import { logger } from '@main/logger'
 import type { AppInfo } from '@shared/plugin-api'
 
-const WIN_WIDTH = 680
-const WIN_HEIGHT = 400
-const SEARCH_HEIGHT = 64
+const BASE_WIN_WIDTH = 680
+const BASE_WIN_HEIGHT = 400
+const BASE_SEARCH_HEIGHT = 64
 const OFFSCREEN_X = -9999
 const OFFSCREEN_Y = -9999
 
@@ -17,6 +18,8 @@ class WindowStateMachine {
   private win: BrowserWindow | null = null
   private _state: WindowState = 'idle'
   private expandedHeight = 0
+  private _scale = 1.0
+  private _windowTopRatio = 0.12
 
   get state(): WindowState {
     return this._state
@@ -34,14 +37,33 @@ class WindowStateMachine {
     return this.win
   }
 
+  get scale(): number {
+    return this._scale
+  }
+
+  get scaledWinWidth(): number {
+    return Math.round(BASE_WIN_WIDTH * this._scale)
+  }
+
+  get scaledWinHeight(): number {
+    return Math.round(BASE_WIN_HEIGHT * this._scale)
+  }
+
+  get scaledSearchHeight(): number {
+    return Math.round(BASE_SEARCH_HEIGHT * this._scale)
+  }
+
   // ═══════════════════════════════════════
   // 初始化
   // ═══════════════════════════════════════
 
   create(): void {
+    this._scale = configManager.getScale()
+    this._windowTopRatio = configManager.getWindowTopRatio()
+
     this.win = new BrowserWindow({
-      width: WIN_WIDTH,
-      height: WIN_HEIGHT,
+      width: this.scaledWinWidth,
+      height: this.scaledWinHeight,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
@@ -57,6 +79,10 @@ class WindowStateMachine {
 
     this.win.setAlwaysOnTop(true, 'screen-saver')
     this.centerAtTop()
+
+    this.win.webContents.on('did-finish-load', () => {
+      this.win?.webContents.setZoomFactor(this._scale)
+    })
 
     this.win.on('blur', () => this.handleBlur())
     this.win.on('ready-to-show', () => this.handleReadyToShow())
@@ -132,8 +158,9 @@ class WindowStateMachine {
     this.expandedHeight = height
 
     if (this.win) {
+      const totalHeight = Math.round((BASE_SEARCH_HEIGHT + height) * this._scale)
       this.win.setResizable(true)
-      this.win.setSize(WIN_WIDTH, SEARCH_HEIGHT + height)
+      this.win.setSize(this.scaledWinWidth, totalHeight)
       this.win.setResizable(false)
     }
   }
@@ -147,17 +174,41 @@ class WindowStateMachine {
 
     if (this.win) {
       this.win.setResizable(true)
-      this.win.setSize(WIN_WIDTH, WIN_HEIGHT)
+      this.win.setSize(this.scaledWinWidth, this.scaledWinHeight)
       this.win.setResizable(false)
     }
   }
 
   resizeExpanded(totalHeight: number): void {
     if (!this.win || this._state !== 'expanded') return
-    this.expandedHeight = totalHeight - SEARCH_HEIGHT
+    this.expandedHeight = Math.round(totalHeight / this._scale) - BASE_SEARCH_HEIGHT
     this.win.setResizable(true)
-    this.win.setSize(WIN_WIDTH, totalHeight)
+    this.win.setSize(this.scaledWinWidth, totalHeight)
     this.win.setResizable(false)
+  }
+
+  applyScale(newScale: number): void {
+    const clamped = Math.max(0.5, Math.min(2.0, newScale))
+    if (this._scale === clamped) return
+
+    logger.trace('[WSM] applyScale %.2f → %.2f', this._scale, clamped)
+    this._scale = clamped
+
+    if (!this.win) return
+
+    this.win.webContents.setZoomFactor(this._scale)
+
+    const w = this.scaledWinWidth
+    if (this._state === 'expanded') {
+      const totalHeight = Math.round((BASE_SEARCH_HEIGHT + this.expandedHeight) * this._scale)
+      this.win.setResizable(true)
+      this.win.setSize(w, totalHeight)
+      this.win.setResizable(false)
+    } else {
+      this.win.setResizable(true)
+      this.win.setSize(w, this.scaledWinHeight)
+      this.win.setResizable(false)
+    }
   }
 
   // ═══════════════════════════════════════
@@ -167,8 +218,9 @@ class WindowStateMachine {
   private centerAtTop(): void {
     if (!this.win) return
     const bounds = screen.getPrimaryDisplay().workArea
-    const x = Math.round(bounds.x + (bounds.width - WIN_WIDTH) / 2)
-    const y = Math.round(bounds.y + bounds.height * 0.12)
+    const w = this.scaledWinWidth
+    const x = Math.round(bounds.x + (bounds.width - w) / 2)
+    const y = Math.round(bounds.y + bounds.height * this._windowTopRatio)
     this.win.setPosition(x, y)
   }
 

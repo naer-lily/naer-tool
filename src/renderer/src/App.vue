@@ -7,6 +7,7 @@
         :prefix-icon="activePluginIcon"
         @input="onInput"
         @keydown="onKeydown"
+        @prefix-click="handleBackspace"
       />
     </div>
 

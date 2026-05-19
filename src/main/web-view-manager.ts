@@ -8,11 +8,10 @@ import type { WebViewConfig } from '@shared/web-view-api'
 
 const RESOURCES_DIR = join(__dirname, '..', '..', 'resources')
 const BUILTIN_PRELOAD = join(RESOURCES_DIR, 'web-view-preload.js')
-const WIN_WIDTH = 680
-const CONTAINER_WIDTH = 648
-const CONTAINER_X = Math.round((WIN_WIDTH - CONTAINER_WIDTH) / 2)
-const SEARCH_HEIGHT = 64
-const BOTTOM_SHADOW_SPACE = 16
+
+const BASE_CONTAINER_WIDTH = 648
+const BASE_SEARCH_HEIGHT = 64
+const BASE_BOTTOM_SHADOW_SPACE = 16
 
 const BASE_CSS = `
 *,*::before,*::after{box-sizing:border-box}
@@ -80,6 +79,26 @@ class WebViewManager {
   private closePromise: Promise<unknown> | null = null
   private lastMessage: unknown = undefined
 
+  private get s(): number {
+    return windowStateMachine.scale
+  }
+
+  private get containerWidth(): number {
+    return Math.round(BASE_CONTAINER_WIDTH * this.s)
+  }
+
+  private get containerX(): number {
+    return Math.round((windowStateMachine.scaledWinWidth - this.containerWidth) / 2)
+  }
+
+  private get searchHeight(): number {
+    return windowStateMachine.scaledSearchHeight
+  }
+
+  private get bottomShadow(): number {
+    return Math.round(BASE_BOTTOM_SHADOW_SPACE * this.s)
+  }
+
   async open(config: WebViewConfig): Promise<unknown> {
     const mainWin = windowStateMachine.browserWindow
     if (!mainWin) {
@@ -101,11 +120,7 @@ class WebViewManager {
     this.view.setBackgroundColor('#00000000')
 
     mainWin.contentView.addChildView(this.view)
-    // 初始高度 1px — 此时页面尚未加载，窗口也还未扩展。
-    // ⚠️ 注意: 1px 视口会导致页面 JS 中的 focus()/select() 触发浏览器的
-    //    scroll-into-view 行为，污染滚动位置（后续 expand 后无法自动恢复）。
-    //    因此 WebView 页面应避免在 load 阶段调用 focus()。
-    this.view.setBounds({ x: CONTAINER_X, y: SEARCH_HEIGHT, width: CONTAINER_WIDTH, height: 1 })
+    this.view.setBounds({ x: this.containerX, y: this.searchHeight, width: this.containerWidth, height: 1 })
 
     if (config.html) {
       const b64 = Buffer.from(config.html, 'utf-8').toString('base64')
@@ -132,26 +147,31 @@ class WebViewManager {
       if (config.injectBaseStyles) {
         this.view!.webContents.insertCSS(BASE_CSS).catch((e: Error) => logger.warn('[WVM] insertCSS failed:', e.message))
       }
-      const height = config.height || 450
+      const rawHeight = config.height || 450
+      const scaledHeight = Math.round(rawHeight * this.s)
 
-      windowStateMachine.webViewReady(height)
+      windowStateMachine.webViewReady(rawHeight)
 
       if (this.view) {
         this.view.setBounds({
-          x: CONTAINER_X,
-          y: SEARCH_HEIGHT,
-          width: CONTAINER_WIDTH,
-          height: height - BOTTOM_SHADOW_SPACE
+          x: this.containerX,
+          y: this.searchHeight,
+          width: this.containerWidth,
+          height: scaledHeight - this.bottomShadow
         })
       }
 
       const wc = windowStateMachine.webContents
-      wc?.send('show-web-view', { height, icon: config.pluginIcon || null })
+      wc?.send('show-web-view', { height: rawHeight, icon: config.pluginIcon || null })
       wc?.send('web-view-ready')
-      logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', height, config.pluginIcon || null)
+      logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', rawHeight, config.pluginIcon || null)
 
       mainWin.focus()
       mainWin.webContents.focus()
+    })
+
+    this.view.webContents.on('did-finish-load', () => {
+      this.view?.webContents.setZoomFactor(this.s)
     })
 
     logger.trace('[WVM] returning closePromise')
@@ -178,8 +198,6 @@ class WebViewManager {
       this.closeResolver = null
       this.closePromise = null
     }
-
-    windowStateMachine.webContents?.send('hide-web-view')
   }
 
   sendInput(text: string): void {
@@ -187,13 +205,15 @@ class WebViewManager {
   }
 
   handleResize(height: number): void {
-    windowStateMachine.resizeExpanded(SEARCH_HEIGHT + height)
+    const scaledTotal = Math.round((BASE_SEARCH_HEIGHT + height) * this.s)
+    windowStateMachine.resizeExpanded(scaledTotal)
     if (this.view) {
+      const scaledH = Math.round(height * this.s)
       this.view.setBounds({
-        x: CONTAINER_X,
-        y: SEARCH_HEIGHT,
-        width: CONTAINER_WIDTH,
-        height: height - BOTTOM_SHADOW_SPACE
+        x: this.containerX,
+        y: this.searchHeight,
+        width: this.containerWidth,
+        height: scaledH - this.bottomShadow
       })
     }
   }

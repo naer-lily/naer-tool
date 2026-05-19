@@ -1,6 +1,6 @@
 <template>
   <div class="search-input" @click="focusInput">
-    <span v-if="prefixIcon" class="prefix-chip">
+    <span v-if="prefixIcon" class="prefix-chip" @click.stop="$emit('prefix-click')">
       <img v-if="isImg" :src="prefixIcon" class="chip-img">
       <span v-else v-html="prefixIcon"></span>
     </span>
@@ -31,6 +31,7 @@ const isImg = computed(() => /^(data:image|https?:)/.test(props.prefixIcon || ''
 const emit = defineEmits<{
   'update:modelValue': [value: string]
   keydown: [e: KeyboardEvent]
+  'prefix-click': []
 }>()
 
 const inputEl = ref<HTMLInputElement | null>(null)
@@ -71,6 +72,11 @@ onMounted(() => {
   background: var(--bg-hover);
   display: inline-flex;
   align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.prefix-chip:hover {
+  background: var(--bg-active);
 }
 .prefix-chip .chip-img {
   width: 18px;

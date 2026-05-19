@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron'
 import type { FormConfig } from '@shared/plugin-api'
+import { configManager } from '@main/config'
 
 function buildFormHtml(config: FormConfig): string {
   const fieldsHtml = config.fields.map(f => buildFieldHtml(f)).join('\n')
@@ -143,9 +144,12 @@ class FormDialogManager {
   private readonly pending = new Map<number, { resolve: (v: Record<string, unknown> | null) => void; window: BrowserWindow }>()
 
   async show(config: FormConfig): Promise<Record<string, unknown> | null> {
-    const width = config.width || 400
+    const baseWidth = config.width || 400
     const fieldCount = config.fields.length
-    const height = 130 + fieldCount * 48
+    const baseHeight = 130 + fieldCount * 48
+    const scale = configManager.getScale()
+    const width = Math.round(baseWidth * scale)
+    const height = Math.round(baseHeight * scale)
 
     const formWindow = new BrowserWindow({
       width,
@@ -161,6 +165,10 @@ class FormDialogManager {
         nodeIntegration: true,
         contextIsolation: false
       }
+    })
+
+    formWindow.webContents.on('did-finish-load', () => {
+      formWindow.webContents.setZoomFactor(scale)
     })
 
     const id = formWindow.webContents.id

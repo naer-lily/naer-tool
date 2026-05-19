@@ -8,6 +8,8 @@ export interface FutariConfig {
   shortcut?: string
   theme?: 'light' | 'dark'
   launchAtStartup?: boolean
+  windowTopRatio?: number
+  scale?: number
   lastUpdateCheck?: number
   skipVersion?: string
 }
@@ -26,7 +28,9 @@ class ConfigManager {
       const defaults: FutariConfig = {
         shortcut: 'Alt+Space',
         theme: 'dark',
-        launchAtStartup: false
+        launchAtStartup: false,
+        windowTopRatio: 0.12,
+        scale: 1.0
       }
       this.config = defaults
       this.save()
@@ -74,6 +78,15 @@ class ConfigManager {
 
   getLaunchAtStartup(): boolean {
     return this.config.launchAtStartup || false
+  }
+
+  getWindowTopRatio(): number {
+    return this.config.windowTopRatio ?? 0.12
+  }
+
+  getScale(): number {
+    const s = this.config.scale ?? 1.0
+    return Math.max(0.5, Math.min(2.0, s))
   }
 }
 

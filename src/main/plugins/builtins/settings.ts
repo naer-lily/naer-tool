@@ -6,18 +6,25 @@ import { app, shell } from 'electron'
 import { configManager } from '@main/config'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
+import { windowStateMachine } from '@main/window-state-machine'
 
 const LOG_PATH = join(homedir(), '.futari', 'logs', 'main.log')
 
 async function openSettings(ctx: CommandContext): Promise<void> {
   const htmlPath = join(app.getAppPath(), 'resources', 'settings.html')
   const cfg = configManager.getRaw()
-  const hash = encodeURIComponent(JSON.stringify({ shortcut: cfg.shortcut || 'Alt+Space', theme: cfg.theme || 'dark', launchAtStartup: cfg.launchAtStartup || false }))
+  const hash = encodeURIComponent(JSON.stringify({
+    shortcut: cfg.shortcut || 'Alt+Space',
+    theme: cfg.theme || 'dark',
+    launchAtStartup: cfg.launchAtStartup || false,
+    windowTopRatio: cfg.windowTopRatio ?? 0.12,
+    scale: cfg.scale ?? 1.0
+  }))
   const url = `file:///${htmlPath.replace(/\\/g, '/')}#${hash}`
 
   const result = await ctx.openWebView({
     url,
-    height: 360,
+    height: 440,
     injectBaseStyles: true
   })
 
@@ -29,11 +36,16 @@ async function openSettings(ctx: CommandContext): Promise<void> {
   const shortcut = String(data.shortcut || '').trim()
   const theme = (data.theme as 'light' | 'dark') || 'dark'
   const launchAtStartup = Boolean(data.launchAtStartup)
+  const windowTopRatio = typeof data.windowTopRatio === 'number' ? data.windowTopRatio : 0.12
+  const scale = typeof data.scale === 'number' ? data.scale : 1.0
 
   if (!shortcut) return
 
-  configManager.patch({ shortcut, theme, launchAtStartup })
-  ctx.toast('Settings saved. Restart Futari to apply shortcut changes.')
+  configManager.patch({ shortcut, theme, launchAtStartup, windowTopRatio, scale })
+
+  windowStateMachine.applyScale(scale)
+
+  ctx.toast('Settings saved. Restart Futari to apply shortcut and top-ratio changes.')
 }
 
 function openLogFile(ctx: CommandContext): void {
