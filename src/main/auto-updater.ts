@@ -149,8 +149,17 @@ class AutoUpdaterManager {
       const appDir = dirname(exePath)
 
       const scriptPath = join(tmpDir, 'updater.ps1')
+      const UPDATE_DEBUG_LOG = join(homedir(), '.futari', 'updater-debug.log')
       const script = `\
 param([string]$OldDir,[string]$NewDir,[string]$Exe,[string]$LogFile,[int]$Pid)
+
+# DEBUG: write to fixed path to verify script body executes
+try {
+  $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
+  "$ts DEBUG script entered OldDir=$OldDir NewDir=$NewDir Exe=$Exe LogFile=$LogFile Pid=$Pid" | Out-File -FilePath '${UPDATE_DEBUG_LOG.replace(/\\/g, '\\\\')}' -Append -Encoding utf8
+} catch {
+  try { $_ | Out-File -FilePath '${UPDATE_DEBUG_LOG.replace(/\\/g, '\\\\')}' -Append -Encoding utf8 } catch {}
+}
 
 $ErrorActionPreference = 'Stop'
 
@@ -215,7 +224,7 @@ Log "Updater exiting"`
       const scriptSize = statSync(scriptPath).size
       const logDir = dirname(UPDATE_LOG)
       const logDirOk = existsSync(logDir)
-      logger.info('[Updater] script written path=%s size=%d logDir=%s exists=%s', scriptPath, scriptSize, logDir, logDirOk)
+      logger.info('[Updater] script written path=%s size=%d logDir=%s exists=%s debugLog=%s', scriptPath, scriptSize, logDir, logDirOk, UPDATE_DEBUG_LOG)
       const spawnArgs = [
         '/c', 'start', '', '/min',
         'powershell',
