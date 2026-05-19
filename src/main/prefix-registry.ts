@@ -3,7 +3,7 @@ import { pluginHost } from '@main/plugin-host'
 class PrefixRegistry {
   private readonly map = new Map<string, string>()
 
-  /** The space after prefix is part of the trigger: user types "prefix " */
+  /** Exact prefix match triggers subcommand entry */
   rebuild(): void {
     this.map.clear()
     for (const plugin of pluginHost.getAll()) {
@@ -18,9 +18,6 @@ class PrefixRegistry {
     for (const [prefix, pluginId] of this.map) {
       if (lower === prefix) {
         return { pluginId, subInput: '' }
-      }
-      if (lower.startsWith(prefix + ' ')) {
-        return { pluginId, subInput: input.slice(prefix.length + 1) }
       }
     }
     return null
