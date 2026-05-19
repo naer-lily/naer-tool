@@ -1,9 +1,9 @@
 import { app } from 'electron'
 import { get } from 'https'
-import { createWriteStream, mkdirSync, writeFileSync } from 'fs'
+import { createWriteStream, existsSync, mkdirSync, statSync, writeFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { tmpdir, homedir } from 'os'
-import { execFile, spawn } from 'child_process'
+import { execFile, spawn, type ChildProcess } from 'child_process'
 import { logger } from '@main/logger'
 
 const REPO = 'naer-lily/futari'
@@ -152,9 +152,17 @@ class AutoUpdaterManager {
       const script = `\
 param([string]$OldDir,[string]$NewDir,[string]$Exe,[string]$LogFile,[int]$Pid)
 
+$ErrorActionPreference = 'Stop'
+
 function Log($msg) {
   $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'
-  "$ts $msg" | Out-File -FilePath $LogFile -Append -Encoding utf8
+  try { "$ts $msg" | Out-File -FilePath $LogFile -Append -Encoding utf8 } catch {}
+}
+
+trap {
+  Log "FATAL TRAP: $_"
+  Log "FATAL line: $($_.InvocationInfo.ScriptLineNumber) char:$($_.InvocationInfo.OffsetInLine)"
+  exit 1
 }
 
 Log "Updater started OldDir=$OldDir NewDir=$NewDir Exe=$Exe Pid=$Pid"
@@ -204,9 +212,11 @@ try {
 }
 Log "Updater exiting"`
       writeFileSync(scriptPath, script, 'utf-8')
-      logger.info('[Updater] launching updater script, appDir=%s log=%s', appDir, UPDATE_LOG)
-
-      spawn('powershell', [
+      const scriptSize = statSync(scriptPath).size
+      const logDir = dirname(UPDATE_LOG)
+      const logDirOk = existsSync(logDir)
+      logger.info('[Updater] script written path=%s size=%d logDir=%s exists=%s', scriptPath, scriptSize, logDir, logDirOk)
+      const spawnArgs = [
         '-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
         '-File', scriptPath,
         '-OldDir', appDir,
@@ -214,10 +224,29 @@ Log "Updater exiting"`
         '-Exe', exePath,
         '-LogFile', UPDATE_LOG,
         '-Pid', String(process.pid)
-      ], { detached: true, stdio: 'ignore' }).unref()
+      ]
+      logger.info('[Updater] spawn args: powershell %s', spawnArgs.map((a, i) => `${i}:${a}`).join(' '))
+      logger.info('[Updater] launching updater script, appDir=%s log=%s', appDir, UPDATE_LOG)
+
+      const cp: ChildProcess = spawn('powershell', spawnArgs, { detached: true, stdio: 'ignore' })
+
+      if (cp.pid) {
+        logger.info('[Updater] child spawned pid=%d', cp.pid)
+      } else {
+        logger.error('[Updater] child spawned but pid is undefined!')
+      }
+
+      cp.on('error', (err) => {
+        logger.error('[Updater] spawn error:', err)
+      })
+
+      cp.unref()
 
       // 给 OS 时间创建子进程，避免 app.quit() 在 spawn 完成前杀掉事件循环
-      setTimeout(() => app.quit(), 1000)
+      setTimeout(() => {
+        logger.info('[Updater] calling app.quit()')
+        app.quit()
+      }, 2000)
     } catch (e) {
       this.updating = false
       throw e
