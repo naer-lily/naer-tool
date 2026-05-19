@@ -231,7 +231,10 @@ Log "Updater exiting"`
       logger.info('[Updater] launching updater via cmd /c start, appDir=%s log=%s', appDir, UPDATE_LOG)
 
       // Use cmd /c start to launch PowerShell — 'start' creates a truly independent process.
-      // Direct spawn('powershell', ..., { detached: true }) prevents -File scripts from executing.
+      // Direct spawn('powershell', ..., { detached: true }) prevents -File scripts from executing
+      // on Windows in GUI (Electron) contexts. This is a known Node.js bug:
+      // https://github.com/nodejs/node/issues/51018
+      // https://stackoverflow.com/questions/63453647
       const cp: ChildProcess = spawn('cmd', spawnArgs, { detached: true, stdio: 'ignore' })
 
       if (cp.pid) {
