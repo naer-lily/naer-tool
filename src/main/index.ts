@@ -1,5 +1,5 @@
 import { app, BrowserWindow, globalShortcut } from 'electron'
-import { createWindow, toggleWindow, showWindow } from '@main/window-manager'
+import { createWindow, signalShow, checkAutoActivate, sendSignal } from '@main/window-manager'
 import { createToastWindow, destroyToastWindow, showScreenToast } from '@main/toast'
 import { createTray, destroyTray, setUpdateAvailable } from '@main/tray'
 import { registerIpc } from '@main/ipc-handlers'
@@ -33,7 +33,7 @@ if (!gotTheLock) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    showWindow()
+    sendSignal('second-instance')
   })
 }
 
@@ -50,7 +50,8 @@ void app.whenReady().then(async () => {
   const shortcut = configManager.getShortcut()
   logger.info('[App] registering global shortcut: %s', shortcut)
   globalShortcut.register(shortcut, () => {
-    toggleWindow()
+    const aa = checkAutoActivate()
+    signalShow(aa || undefined)
   })
 
   registerIpc()

@@ -1,29 +1,71 @@
 import type { BrowserWindow } from 'electron'
-import { windowStateMachine } from '@main/window-state-machine'
-import type { WindowState } from '@main/window-state-machine'
-
-export type { WindowState }
+import { searchWindow } from '@main/search-window'
+import type { AppSignalAutoActivate, AppSignalPayload } from '@shared/ipc-channels'
 
 export function createWindow(): void {
-  windowStateMachine.create()
+  searchWindow.create()
 }
 
 export function showWindow(): void {
-  windowStateMachine.show()
+  searchWindow.show()
 }
 
-export function hideWindow(source?: string): void {
-  windowStateMachine.hide(source)
-}
-
-export function toggleWindow(): void {
-  windowStateMachine.toggle()
+export function hideWindow(): void {
+  searchWindow.hide()
 }
 
 export function getMainWindow(): BrowserWindow | null {
-  return windowStateMachine.browserWindow
+  return searchWindow.browserWindow
 }
 
-export function getWindowState(): WindowState {
-  return windowStateMachine.state
+export function getWebContents() {
+  return searchWindow.webContents
+}
+
+export function getScale(): number {
+  return searchWindow.scale
+}
+
+export function getScaledWinWidth(): number {
+  return searchWindow.scaledWinWidth
+}
+
+export function getScaledSearchHeight(): number {
+  return searchWindow.scaledSearchHeight
+}
+
+export function getScaledContainerWidth(): number {
+  return searchWindow.scaledContainerWidth
+}
+
+export function getScaledContainerX(): number {
+  return searchWindow.scaledContainerX
+}
+
+export function setWindowHeight(rendererHeight: number): void {
+  searchWindow.setWindowHeight(rendererHeight)
+}
+
+export function resetWindowHeight(): void {
+  searchWindow.resetWindowHeight()
+}
+
+export function setWindowSize(w: number, h: number): void {
+  searchWindow.setWindowSize(w, h)
+}
+
+export function applyScale(newScale: number): void {
+  searchWindow.applyScale(newScale)
+}
+
+export function sendSignal(type: AppSignalPayload['type'], extra?: Partial<AppSignalPayload>): void {
+  searchWindow.sendSignal(type, extra)
+}
+
+export function signalShow(autoActivate?: AppSignalAutoActivate): void {
+  searchWindow.signalShow(autoActivate)
+}
+
+export function checkAutoActivate(): AppSignalAutoActivate | null {
+  return searchWindow.checkAutoActivate()
 }

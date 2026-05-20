@@ -6,7 +6,7 @@ import { app, shell } from 'electron'
 import { configManager } from '@main/config'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
-import { windowStateMachine } from '@main/window-state-machine'
+import { applyScale } from '@main/window-manager'
 
 const LOG_PATH = join(homedir(), '.futari', 'logs', 'main.log')
 
@@ -45,7 +45,7 @@ async function openSettings(ctx: CommandContext): Promise<void> {
 
   configManager.patch({ shortcut, theme, launchAtStartup, windowTopRatio, scale, windowWidth })
 
-  windowStateMachine.applyScale(scale)
+  applyScale(scale)
 
   ctx.toast('Settings saved. Restart Futari to apply shortcut and top-ratio changes.')
 }

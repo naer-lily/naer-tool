@@ -49,9 +49,9 @@ const { toggle } = useTheme()
 const {
   query, results, activeIndex, toast,
   searchMode, activePluginIcon,
-  webviewActive, webviewLoading, webviewHeight,
+  webviewActive, webviewLoading, webviewHeight, isIdle,
   doSearch, selectResult,
-  handleEscape, handleBackspace, handleFocusInput, handleAutoActivate
+  handleEscape, handleBackspace, setFocusCallback
 } = useSearch()
 
 const searchInputRef = ref<InstanceType<typeof SearchInput> | null>(null)
@@ -85,19 +85,14 @@ function onKeydown(e: KeyboardEvent): void {
 }
 
 onMounted(() => {
+  setFocusCallback(() => {
+    void nextTick(() => searchInputRef.value?.focusInput())
+  })
   void doSearch()
-  window.futariAPI.onFocusInput(() => {
-    handleFocusInput(() => {
-      void nextTick(() => searchInputRef.value?.focusInput())
-    })
-  })
   window.futariAPI.onToggleTheme(() => toggle())
-  window.futariAPI.onAutoActivate((pluginId: string, icon?: string) => {
-    handleAutoActivate(pluginId, icon)
-  })
 
   resizeObserver = new ResizeObserver(() => {
-    if (containerRef.value && !webviewActive.value) {
+    if (containerRef.value && !webviewActive.value && !isIdle.value) {
       const h = containerRef.value.getBoundingClientRect().height + 16
       window.futariAPI.resizeWindow(h)
     }

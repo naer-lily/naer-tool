@@ -1,6 +1,6 @@
 import { app, Tray, Menu, nativeImage, dialog } from 'electron'
 import { join } from 'path'
-import { toggleWindow } from '@main/window-manager'
+import { sendSignal } from '@main/window-manager'
 import { showScreenToast } from '@main/toast'
 import { autoUpdater } from '@main/auto-updater'
 import { logger } from '@main/logger'
@@ -36,7 +36,7 @@ function createBadgedIcon(base: Electron.NativeImage): Electron.NativeImage {
 function rebuildMenu(): void {
   if (!tray) return
   const template: Electron.MenuItemConstructorOptions[] = [
-    { label: '显示/隐藏', click: toggleWindow },
+    { label: '显示/隐藏', click: () => sendSignal('tray-clicked') },
     {
       label: updateVersion ? `安装更新 ${updateVersion}` : '检查更新',
       click: () => { void handleUpdateClick() }
@@ -126,7 +126,7 @@ export function createTray(): void {
   tray = new Tray(baseIcon16)
   tray.setToolTip('Futari')
   rebuildMenu()
-  tray.on('click', toggleWindow)
+  tray.on('click', () => sendSignal('tray-clicked'))
 }
 
 export function destroyTray(): void {

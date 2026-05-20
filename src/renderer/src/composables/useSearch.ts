@@ -1,56 +1,48 @@
 import { onBeforeUnmount } from 'vue'
-import { useViewState } from './useViewState'
+import { useAppState } from './useAppState'
 
 export function useSearch() {
-  const vs = useViewState()
+  const as = useAppState()
 
   let toastCleanup: (() => void) | null = null
+  let appEventCleanup: (() => void) | null = null
 
   toastCleanup = window.futariAPI.onToast((msg: string) => {
-    vs.toast.value = msg
+    as.toast.value = msg
     setTimeout(() => {
-      vs.toast.value = ''
+      as.toast.value = ''
     }, 2000)
   })
 
-  const showWebViewCleanup = window.futariAPI.onShowWebView((payload) => {
-    vs.handleShowWebView(payload)
-  })
-
-  const hideWebViewCleanup = window.futariAPI.onHideWebView(() => {
-    /* state already updated synchronously in closeWebView */
-  })
-
-  const webViewReadyCleanup = window.futariAPI.onWebViewReady(() => {
-    vs.handleWebViewReady()
+  appEventCleanup = window.futariAPI.onAppEvent((payload) => {
+    as.handleSignal(payload)
   })
 
   onBeforeUnmount(() => {
     toastCleanup?.()
-    showWebViewCleanup?.()
-    hideWebViewCleanup?.()
-    webViewReadyCleanup?.()
+    appEventCleanup?.()
   })
 
   return {
-    query: vs.query,
-    results: vs.results,
-    activeIndex: vs.activeIndex,
-    toast: vs.toast,
-    searchMode: vs.mode,
-    activePluginId: vs.activePluginId,
-    activePluginIcon: vs.activePluginIcon,
-    webviewActive: vs.webviewActive,
-    webviewLoading: vs.webviewLoading,
-    webviewHeight: vs.webviewHeight,
-    doSearch: vs.doSearch,
-    selectResult: vs.selectResult,
-    exitSubcommand: vs.exitSubcommand,
-    enterSubcommand: vs.enterSubcommand,
-    closeWebView: vs.closeWebView,
-    handleEscape: vs.handleEscape,
-    handleBackspace: vs.handleBackspace,
-    handleFocusInput: vs.handleFocusInput,
-    handleAutoActivate: vs.handleAutoActivate
+    query: as.query,
+    results: as.results,
+    activeIndex: as.activeIndex,
+    toast: as.toast,
+    searchMode: as.mode,
+    activePluginId: as.activePluginId,
+    activePluginIcon: as.activePluginIcon,
+    isIdle: as.isIdle,
+    webviewActive: as.webviewActive,
+    webviewLoading: as.webviewLoading,
+    webviewHeight: as.webviewHeight,
+    doSearch: as.doSearch,
+    selectResult: as.selectResult,
+    exitSubcommand: as.exitSubcommand,
+    enterSubcommand: as.enterSubcommand,
+    closeWebView: as.closeWebView,
+    handleEscape: as.handleEscape,
+    handleBackspace: as.handleBackspace,
+    setFocusCallback: as.setFocusCallback,
+    focusInput: as.focusInput
   }
 }

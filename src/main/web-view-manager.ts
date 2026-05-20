@@ -2,7 +2,7 @@ import { WebContentsView } from 'electron'
 import { readFileSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { windowStateMachine } from '@main/window-state-machine'
+import { getMainWindow, getScale, getScaledContainerWidth, getScaledContainerX, getScaledSearchHeight, setWindowSize, sendSignal } from '@main/window-manager'
 import { logger } from '@main/logger'
 import type { WebViewConfig } from '@shared/web-view-api'
 
@@ -79,19 +79,19 @@ class WebViewManager {
   private lastMessage: unknown = undefined
 
   private get s(): number {
-    return windowStateMachine.scale
+    return getScale()
   }
 
   private get containerWidth(): number {
-    return windowStateMachine.scaledContainerWidth
+    return getScaledContainerWidth()
   }
 
   private get containerX(): number {
-    return windowStateMachine.scaledContainerX
+    return getScaledContainerX()
   }
 
   private get searchHeight(): number {
-    return windowStateMachine.scaledSearchHeight
+    return getScaledSearchHeight()
   }
 
   private get bottomShadow(): number {
@@ -99,7 +99,7 @@ class WebViewManager {
   }
 
   async open(config: WebViewConfig): Promise<unknown> {
-    const mainWin = windowStateMachine.browserWindow
+    const mainWin = getMainWindow()
     if (!mainWin) {
       logger.warn('[WVM] open: no main window')
       return Promise.resolve(undefined)
@@ -114,7 +114,6 @@ class WebViewManager {
 
     if (this.view) this.close()
 
-    windowStateMachine.beginWebView()
     this.view = getWebView(config)
     this.view.setBackgroundColor('#00000000')
 
@@ -149,7 +148,9 @@ class WebViewManager {
       const rawHeight = config.height || 450
       const scaledHeight = Math.round(rawHeight * this.s)
 
-      windowStateMachine.webViewReady(rawHeight)
+      const expandedTotal = Math.round((BASE_SEARCH_HEIGHT + rawHeight) * this.s)
+      logger.trace('[WVM] dom-ready: setWindowSize w=%d h=%d', Math.round(800 * this.s), expandedTotal)
+      setWindowSize(getMainWindow() ? Math.round(800 * this.s) : 0, expandedTotal)
 
       if (this.view) {
         this.view.setBounds({
@@ -160,10 +161,10 @@ class WebViewManager {
         })
       }
 
-      const wc = windowStateMachine.webContents
-      wc?.send('show-web-view', { height: rawHeight, icon: config.pluginIcon || null })
-      wc?.send('web-view-ready')
-      logger.trace('[WVM] sent show-web-view(%d) icon=%s + web-view-ready', rawHeight, config.pluginIcon || null)
+      logger.trace('[WVM] dom-ready: sending app-event webview-opened + webview-ready')
+      sendSignal('webview-opened', { height: rawHeight, icon: config.pluginIcon || null })
+      sendSignal('webview-ready')
+      logger.trace('[WVM] sent webview-opened(%d) icon=%s + webview-ready', rawHeight, config.pluginIcon || null)
 
       mainWin.focus()
       mainWin.webContents.focus()
@@ -183,11 +184,9 @@ class WebViewManager {
     const resolveData = webViewData !== undefined ? webViewData : this.lastMessage
 
     if (this.view) {
-      try { windowStateMachine.browserWindow?.contentView.removeChildView(this.view) } catch { /* ignore */ }
+      try { getMainWindow()?.contentView.removeChildView(this.view) } catch { /* ignore */ }
       this.view = null
     }
-
-    windowStateMachine.endWebView()
 
     cleanupTempPreload()
 
@@ -205,7 +204,9 @@ class WebViewManager {
 
   handleResize(height: number): void {
     const scaledTotal = Math.round((BASE_SEARCH_HEIGHT + height) * this.s)
-    windowStateMachine.resizeExpanded(scaledTotal)
+    const win = getMainWindow()
+    const w = win ? Math.round(800 * this.s) : 0
+    setWindowSize(w, scaledTotal)
     if (this.view) {
       const scaledH = Math.round(height * this.s)
       this.view.setBounds({
@@ -219,7 +220,7 @@ class WebViewManager {
 
   handleMessage(data: unknown): void {
     this.lastMessage = data
-    windowStateMachine.webContents?.send('web-view-message', data)
+    sendSignal('webview-message', { data })
   }
 
   get isActive(): boolean {

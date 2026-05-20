@@ -10,8 +10,7 @@ import { clipboard, shell } from 'electron'
 import type { SearchResult, SearchResponse, ICommand, CommandContext, CommandOutcome, PluginContext } from '@shared/plugin-api'
 
 export interface ExecuteResult {
-  webViewOpened: boolean
-  shouldClose: boolean
+  outcome?: 'close' | 'home'
 }
 
 const MAX_RESULTS = 9
@@ -138,23 +137,18 @@ class SearchEngine {
     const plugin = pluginHost.get(pluginId)
     if (!plugin) {
       logger.warn('[SE] execute: plugin not found id=%s', pluginId)
-      return { webViewOpened: false, shouldClose: true }
+      return { outcome: 'close' }
     }
 
     logger.trace('[SE] execute plugin=%s cmd=%s input=%s', pluginId, commandId, input)
-
-    let webViewResult: unknown = undefined
-    let hadWebView = false
 
     const ctx: CommandContext = {
       input,
       toast: showToast,
       showForm: async (config) => formDialog.show(config),
       openWebView: async (config) => {
-        logger.trace('[SE] openWebView called hadWebView=%s', hadWebView)
-        hadWebView = true
+        logger.trace('[SE] openWebView called')
         const result = await webViewManager.open(config)
-        webViewResult = result
         logger.trace('[SE] openWebView resolved result=%o', result)
         return result
       },
@@ -191,18 +185,8 @@ class SearchEngine {
       logger.trace('[SE] cmd.execute returned outcome=%s', outcome)
     }
 
-    let shouldClose: boolean
-    if (outcome === 'close') {
-      shouldClose = true
-    } else if (outcome === 'home') {
-      shouldClose = false
-    } else if (hadWebView) {
-      shouldClose = webViewResult !== undefined
-    } else {
-      shouldClose = true
-    }
-    logger.trace('[SE] execute done hadWebView=%s wvResult=%o outcome=%s shouldClose=%s', hadWebView, webViewResult, outcome, shouldClose)
-    return { webViewOpened: false, shouldClose }
+    logger.trace('[SE] execute done outcome=%s', outcome)
+    return { outcome: outcome || undefined }
   }
 
   private async resolveCommand(plugin: { buildCommands(ctx: PluginContext, input: string): Promise<ICommand[]>; getFallbackCommands?(ctx: PluginContext, input: string): Promise<ICommand[]> }, commandId: string, input: string, pluginId: string): Promise<ICommand | null> {

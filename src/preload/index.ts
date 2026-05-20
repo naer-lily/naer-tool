@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/ipc-channels'
+import type { AppSignalPayload } from '@shared/ipc-channels'
 import type { SearchResponse } from '@shared/plugin-api'
 
 const api = {
@@ -7,27 +8,31 @@ const api = {
     return ipcRenderer.invoke(IPC.SEARCH, { text, pluginId })
   },
 
-  execute: async (pluginId: string, commandId: string, input: string): Promise<{ webViewOpened: boolean; shouldClose: boolean }> => {
+  execute: async (pluginId: string, commandId: string, input: string): Promise<{ outcome?: 'close' | 'home' }> => {
     return ipcRenderer.invoke(IPC.EXECUTE, { pluginId, commandId, input })
   },
 
-  closeWindow: (): void => {
-    ipcRenderer.send(IPC.CLOSE)
+  showWindow: (): void => {
+    ipcRenderer.send(IPC.SHOW_WINDOW)
   },
 
-  closeWebView: (): void => {
-    ipcRenderer.send(IPC.CLOSE_WEB_VIEW)
+  hideWindow: (): void => {
+    ipcRenderer.send(IPC.HIDE_WINDOW)
+  },
+
+  closeWebView: (data?: unknown): void => {
+    ipcRenderer.send(IPC.CLOSE_WEB_VIEW, data)
   },
 
   webViewInput: (text: string): void => {
     ipcRenderer.send(IPC.WEB_VIEW_INPUT, text)
   },
 
-  onFocusInput: (cb: () => void): (() => void) => {
-    const handler = () => cb()
-    ipcRenderer.on('focus-input', handler)
+  onAppEvent: (cb: (payload: AppSignalPayload) => void): (() => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, payload: AppSignalPayload) => cb(payload)
+    ipcRenderer.on(IPC.APP_EVENT, handler)
     return () => {
-      ipcRenderer.removeListener('focus-input', handler)
+      ipcRenderer.removeListener(IPC.APP_EVENT, handler)
     }
   },
 
@@ -44,38 +49,6 @@ const api = {
     ipcRenderer.on('toggle-theme', handler)
     return () => {
       ipcRenderer.removeListener('toggle-theme', handler)
-    }
-  },
-
-  onAutoActivate: (cb: (pluginId: string, icon?: string) => void): (() => void) => {
-    const handler = (_e: Electron.IpcRendererEvent, pluginId: string, icon?: string) => cb(pluginId, icon)
-    ipcRenderer.on('auto-activate', handler)
-    return () => {
-      ipcRenderer.removeListener('auto-activate', handler)
-    }
-  },
-
-  onShowWebView: (cb: (payload: { height: number; icon: string | null }) => void): (() => void) => {
-    const handler = (_e: Electron.IpcRendererEvent, payload: { height: number; icon: string | null }) => cb(payload)
-    ipcRenderer.on(IPC.SHOW_WEB_VIEW, handler)
-    return () => {
-      ipcRenderer.removeListener(IPC.SHOW_WEB_VIEW, handler)
-    }
-  },
-
-  onHideWebView: (cb: () => void): (() => void) => {
-    const handler = () => cb()
-    ipcRenderer.on(IPC.HIDE_WEB_VIEW, handler)
-    return () => {
-      ipcRenderer.removeListener(IPC.HIDE_WEB_VIEW, handler)
-    }
-  },
-
-  onWebViewReady: (cb: () => void): (() => void) => {
-    const handler = () => cb()
-    ipcRenderer.on(IPC.WEB_VIEW_READY, handler)
-    return () => {
-      ipcRenderer.removeListener(IPC.WEB_VIEW_READY, handler)
     }
   },
 

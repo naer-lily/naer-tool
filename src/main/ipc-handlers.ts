@@ -1,8 +1,7 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { searchEngine } from '@main/search-engine'
-import { hideWindow, getMainWindow } from '@main/window-manager'
-import { windowStateMachine } from '@main/window-state-machine'
+import { showWindow, hideWindow, getMainWindow, setWindowHeight } from '@main/window-manager'
 import { showScreenToast } from '@main/toast'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
@@ -24,17 +23,23 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.EXECUTE, async (_event, payload: { pluginId: string; commandId: string; input: string }) => {
     logger.trace('[IPC] EXECUTE plugin=%s cmd=%s input=%s', payload.pluginId, payload.commandId, payload.input)
     try {
-      const { shouldClose } = await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
-      logger.trace('[IPC] EXECUTE done shouldClose=%s', shouldClose)
-      return { webViewOpened: false, shouldClose }
+      const { outcome } = await searchEngine.execute(payload.pluginId, payload.commandId, payload.input, showScreenToast)
+      logger.trace('[IPC] EXECUTE done outcome=%s', outcome)
+      return { outcome }
     } catch (err) {
       logger.error('[IPC] EXECUTE error:', err)
-      return { webViewOpened: false, shouldClose: true }
+      return { outcome: 'close' as const }
     }
   })
 
-  ipcMain.on(IPC.CLOSE, () => {
-    hideWindow('ipc-close')
+  ipcMain.on(IPC.HIDE_WINDOW, () => {
+    logger.trace('[IPC] HIDE_WINDOW received')
+    hideWindow()
+  })
+
+  ipcMain.on(IPC.SHOW_WINDOW, () => {
+    logger.trace('[IPC] SHOW_WINDOW received')
+    showWindow()
   })
 
   ipcMain.on(IPC.FORM_SUBMIT, (event, values: Record<string, unknown>) => {
@@ -64,7 +69,7 @@ export function registerIpc(): void {
   })
 
   ipcMain.on(IPC.RESIZE_WINDOW, (_event, height: number) => {
-    windowStateMachine.adjustHeight(height)
+    setWindowHeight(height)
   })
 
   ipcMain.on(IPC.LOG, (_event, payload: { level: string; args: unknown[] }) => {

@@ -151,6 +151,7 @@ export interface SearchResponse {
  * @returns 符合 buildCommands(ctx, input) 签名的函数
  */
 export function staticCommands(defs: StaticCommandDef[]): (_ctx: PluginContext, input: string) => Promise<ICommand[]> {
+  // eslint-disable-next-line @typescript-eslint/require-await
   return async (_ctx: PluginContext, input: string): Promise<ICommand[]> => {
     const results: ICommand[] = []
     for (const def of defs) {
