@@ -73,12 +73,28 @@ const PLUGINS_DIR = join(homedir(), '.futari', 'plugins')
 class PluginHost {
   private readonly plugins = new Map<string, IPlugin>()
   private readonly pluginPaths = new Map<string, string>()
+  private disabledBuiltins = new Set<string>()
+
+  setDisabledBuiltins(ids: string[]): void {
+    this.disabledBuiltins = new Set(ids.filter(id => id !== 'settings'))
+    logger.info('[PluginHost] disabledBuiltins updated: %o', [...this.disabledBuiltins])
+  }
 
   get(pluginId: string): IPlugin | undefined {
     return this.plugins.get(pluginId)
   }
 
   getAll(): IPlugin[] {
+    return Array.from(this.plugins.values()).filter(p => {
+      const path = this.pluginPaths.get(p.id)
+      if (path?.startsWith('builtin:')) {
+        return !this.disabledBuiltins.has(p.id)
+      }
+      return true
+    })
+  }
+
+  getAllRaw(): IPlugin[] {
     return Array.from(this.plugins.values())
   }
 

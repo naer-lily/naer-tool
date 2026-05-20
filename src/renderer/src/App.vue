@@ -31,6 +31,7 @@
       :active-index="activeIndex"
       @select="onSelect"
       @update:active-index="activeIndex = $event"
+      @context-action="onContextAction"
     />
 
     <div v-if="toast" class="toast">{{ toast }}</div>
@@ -82,6 +83,10 @@ function onKeydown(e: KeyboardEvent): void {
     return
   }
   navKeydown(e)
+}
+
+async function onContextAction(payload: { pluginId: string; commandId: string; actionId: string }): Promise<void> {
+  await window.futariAPI.contextAction(payload.pluginId, payload.commandId, payload.actionId, query.value)
 }
 
 onMounted(() => {
@@ -238,5 +243,68 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding-top: 16px;
+}
+
+.ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: transparent;
+}
+
+.ctx-menu {
+  position: fixed;
+  z-index: 10000;
+  background: var(--bg-primary);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  font-family: var(--font-family);
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: background 0.08s;
+}
+
+.ctx-item:hover {
+  background: var(--bg-active);
+}
+
+.ctx-icon {
+  font-size: 15px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ctx-icon :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.ctx-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.ctx-separator {
+  height: 1px;
+  background: var(--border-divider);
+  margin: 4px 8px;
 }
 </style>

@@ -14,6 +14,7 @@ import runPlugin from '@main/plugins/builtins/run'
 import pluginCreator from '@main/plugins/builtins/plugin-creator'
 import settingsPlugin from '@main/plugins/builtins/settings'
 import ctoolPlugin from '@main/plugins/builtins/ctool'
+import everythingPlugin from '@main/plugins/builtins/everything'
 
 async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(calculatorPlugin, 'calculator')
@@ -21,6 +22,7 @@ async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(pluginCreator, 'plugin-creator')
   await pluginHost.activateBuiltin(settingsPlugin, 'settings')
   await pluginHost.activateBuiltin(ctoolPlugin, 'ctool')
+  await pluginHost.activateBuiltin(everythingPlugin, 'everything')
 }
 
 async function loadUserPlugins(): Promise<void> {
@@ -40,6 +42,7 @@ if (!gotTheLock) {
 void app.whenReady().then(async () => {
   configManager.load()
   app.setLoginItemSettings({ openAtLogin: configManager.getLaunchAtStartup() })
+  pluginHost.setDisabledBuiltins(configManager.getRaw().disabledPlugins || [])
   await registerBuiltinPlugins()
   await loadUserPlugins()
   prefixRegistry.rebuild()

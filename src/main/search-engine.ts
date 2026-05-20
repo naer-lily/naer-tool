@@ -70,7 +70,8 @@ function collectFallbackResults(cmds: ICommand[], pluginId: string): SearchResul
     name: cmd.name,
     icon: cmd.icon,
     preview: cmd.preview,
-    shortcutIndex: 0
+    shortcutIndex: 0,
+    contextMenu: cmd.contextMenu
   }))
 }
 

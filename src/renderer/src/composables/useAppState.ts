@@ -32,6 +32,7 @@ function createAppState() {
   const executingCommand = ref(false)
 
   let resumeWebView: { height: number; icon: string | null } | null = null
+  let resumeSubcommand: { pluginId: string; icon: string | null; query: string } | null = null
 
   const mode = computed<'main' | 'subcommand'>(() =>
     state.value.id === 'subcommand' ? 'subcommand' : 'main'
@@ -147,16 +148,30 @@ function createAppState() {
               void enterSubcommandInternal(aa.pluginId, aa.icon)
               focusInput()
             } else {
-              logger.trace('[AS] signal: idle+%s → SHOW(home) + showWindow', payload.type)
-              dispatch({ type: 'SHOW' })
-              window.futariAPI.showWindow()
-              void doSearch().then(() => focusInput())
+              const rsc = resumeSubcommand
+              resumeSubcommand = null
+              if (rsc) {
+                logger.trace('[AS] signal: idle+%s → resume subcommand plugin=%s query=%s', payload.type, rsc.pluginId, rsc.query)
+                dispatch({ type: 'SHOW', autoActivate: { pluginId: rsc.pluginId, icon: rsc.icon ?? undefined } })
+                window.futariAPI.showWindow()
+                query.value = rsc.query
+                void doSearch()
+                focusInput()
+              } else {
+                logger.trace('[AS] signal: idle+%s → SHOW(home) + showWindow', payload.type)
+                dispatch({ type: 'SHOW' })
+                window.futariAPI.showWindow()
+                void doSearch().then(() => focusInput())
+              }
             }
           }
         } else {
           if (s.id === 'webview-loading' || s.id === 'webview-active') {
             resumeWebView = { height: s.height, icon: s.icon }
             logger.trace('[AS] signal: %s+%s → save WebView + HIDE (keep WebView alive)', s.id, payload.type)
+          } else if (s.id === 'subcommand') {
+            resumeSubcommand = { pluginId: s.pluginId, icon: s.icon, query: query.value }
+            logger.trace('[AS] signal: subcommand+%s → save subcommand + HIDE', payload.type)
           } else {
             logger.trace('[AS] signal: %s+%s → HIDE', s.id, payload.type)
           }
@@ -174,10 +189,21 @@ function createAppState() {
             dispatch({ type: 'RESUME_WEBVIEW', height: rwv.height, icon: rwv.icon })
             window.futariAPI.showWindow()
           } else {
-            logger.trace('[AS] signal: idle+second-instance → SHOW + showWindow')
-            dispatch({ type: 'SHOW' })
-            window.futariAPI.showWindow()
-            void doSearch().then(() => focusInput())
+            const rsc = resumeSubcommand
+            resumeSubcommand = null
+            if (rsc) {
+              logger.trace('[AS] signal: idle+second-instance → resume subcommand plugin=%s', rsc.pluginId)
+              dispatch({ type: 'SHOW', autoActivate: { pluginId: rsc.pluginId, icon: rsc.icon ?? undefined } })
+              window.futariAPI.showWindow()
+              query.value = rsc.query
+              void doSearch()
+              focusInput()
+            } else {
+              logger.trace('[AS] signal: idle+second-instance → SHOW + showWindow')
+              dispatch({ type: 'SHOW' })
+              window.futariAPI.showWindow()
+              void doSearch().then(() => focusInput())
+            }
           }
         } else {
           logger.trace('[AS] signal: %s+second-instance → ignore', s.id)
@@ -186,6 +212,9 @@ function createAppState() {
 
       case 'window-blurred':
         if (s.id === 'home' || s.id === 'subcommand') {
+          if (s.id === 'subcommand') {
+            resumeSubcommand = { pluginId: s.pluginId, icon: s.icon, query: query.value }
+          }
           logger.trace('[AS] signal: %s+window-blurred → HIDE', s.id)
           dispatch({ type: 'HIDE' })
           window.futariAPI.hideWindow()
@@ -256,6 +285,7 @@ function createAppState() {
     const response: SearchResponse = await window.futariAPI.search(text)
 
     if (response.mode === 'subcommand') {
+      resumeSubcommand = null
       dispatch({ type: 'ENTER_SUBCOMMAND', pluginId: response.pluginId!, icon: response.pluginIcon || undefined })
       query.value = ''
       results.value = response.results
@@ -279,6 +309,7 @@ function createAppState() {
 
   function exitSubcommand(): void {
     if (!dispatch({ type: 'EXIT_SUBCOMMAND' })) return
+    resumeSubcommand = null
     query.value = ''
     void doSearch()
   }
@@ -351,6 +382,7 @@ function createAppState() {
         dispatch({ type: 'WEBVIEW_CLOSE' })
       } else if (state.value.id === 'subcommand') {
         dispatch({ type: 'EXIT_SUBCOMMAND' })
+        resumeSubcommand = null
       }
       query.value = ''
       results.value = []

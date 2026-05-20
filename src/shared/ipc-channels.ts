@@ -15,7 +15,8 @@ export const IPC = {
   RESIZE_WINDOW: 'resize-window',
   SHOW_WINDOW: 'show-window',
   HIDE_WINDOW: 'hide-window',
-  SET_THEME: 'set-theme'
+  SET_THEME: 'set-theme',
+  CONTEXT_ACTION: 'context-action'
 } as const
 
 export type AppSignalType =

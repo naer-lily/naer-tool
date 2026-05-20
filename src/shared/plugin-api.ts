@@ -81,11 +81,19 @@ export type CommandResult = void | Promise<void>
 
 export type CommandOutcome = 'close' | 'home'
 
+export interface ContextMenuItem {
+  id?: string
+  label?: string
+  icon?: string
+  separator?: boolean
+}
+
 export interface ICommand {
   id: string
   name: string
   icon?: string
   preview: string
+  contextMenu?: ContextMenuItem[]
 
   execute(ctx: CommandContext): CommandOutcome | void | Promise<CommandOutcome | void>
 }
@@ -117,6 +125,7 @@ export interface IPlugin {
 
   buildCommands(ctx: PluginContext, input: string): Promise<ICommand[]>
   getFallbackCommands?(ctx: PluginContext, input: string): Promise<ICommand[]>
+  onContextAction?(commandId: string, actionId: string, ctx: CommandContext): Promise<void>
   shouldAutoActivate?(appInfo: AppInfo): boolean
   getTrayItems?(): TrayMenuItem[]
   companion?: CompanionConfig | CompanionConfig[]
@@ -130,6 +139,7 @@ export interface SearchResult {
   preview: string
   shortcutIndex: number
   prefixEntry?: string
+  contextMenu?: ContextMenuItem[]
 }
 
 export interface SearchResponse {

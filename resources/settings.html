@@ -83,13 +83,31 @@
 
   <div class="notice">Shortcut and window size changes require restart.</div>
 
+  <div style="margin-top:12px">
+    <h1>&#x1F9E9; Built-in Plugins</h1>
+    <div id="plugin-list"></div>
+  </div>
+
+  <div class="actions">
+
+
+
+
+
+
+    <button class="btn btn-primary" id="btn-save">Save</button>
+    <button class="btn btn-secondary" id="btn-cancel">Cancel</button>
+  </div>
+
   <script>
-    var initialShortcut = 'Alt+Space'
-    var initialTheme = 'dark'
-    var initialLaunchAtStartup = false
-    var initialWindowTopRatio = 0.12
-    var initialScale = 1.0
-    var initialWindowWidth = 800
+
+
+
+
+
+
+    var initialDisabledPlugins = []
+    var builtinPlugins = []
 
     try {
       if (window.location.hash) {
@@ -100,6 +118,10 @@
         if (typeof data.windowTopRatio === 'number') initialWindowTopRatio = data.windowTopRatio
         if (typeof data.scale === 'number') initialScale = data.scale
         if (typeof data.windowWidth === 'number') initialWindowWidth = data.windowWidth
+        if (Array.isArray(data.builtinPlugins)) {
+          builtinPlugins = data.builtinPlugins
+          initialDisabledPlugins = builtinPlugins.filter(function(p) { return p.disabled }).map(function(p) { return p.id })
+        }
       }
     } catch(e) {}
 
@@ -117,6 +139,27 @@
     scaleEl.value = initialScale
     widthEl.value = initialWindowWidth
 
+    var pluginListEl = document.getElementById('plugin-list')
+    var pluginCheckboxes = {}
+    builtinPlugins.forEach(function(plugin) {
+      if (plugin.id === 'settings') return
+      var label = document.createElement('label')
+      label.className = 'field checkbox'
+      label.style.marginBottom = '4px'
+      var cb = document.createElement('input')
+      cb.type = 'checkbox'
+      cb.value = plugin.id
+      cb.checked = plugin.disabled
+      var span = document.createElement('span')
+      span.textContent = plugin.icon + ' ' + plugin.name
+      label.appendChild(cb)
+      label.appendChild(span)
+      pluginListEl.appendChild(label)
+      pluginCheckboxes[plugin.id] = cb
+    })
+
+
+
     document.getElementById('btn-save').addEventListener('click', function() {
       var shortcut = shortcutEl.value.trim()
       var theme = themeEl.value
@@ -124,7 +167,12 @@
         shortcutEl.focus()
         return
       }
-      window.futariWeb.close({ shortcut: shortcut, theme: theme, launchAtStartup: launchEl.checked, windowTopRatio: parseFloat(topRatioEl.value) || 0.12, scale: parseFloat(scaleEl.value) || 1.0, windowWidth: parseInt(widthEl.value, 10) || 800 })
+      var disabledPlugins = []
+      Object.keys(pluginCheckboxes).forEach(function(id) {
+        if (pluginCheckboxes[id].checked) disabledPlugins.push(id)
+      })
+
+      window.futariWeb.close({ shortcut: shortcut, theme: theme, launchAtStartup: launchEl.checked, windowTopRatio: parseFloat(topRatioEl.value) || 0.12, scale: parseFloat(scaleEl.value) || 1.0, windowWidth: parseInt(widthEl.value, 10) || 800, disabledPlugins: disabledPlugins })
     })
 
     document.getElementById('btn-cancel').addEventListener('click', function() {

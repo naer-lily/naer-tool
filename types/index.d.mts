@@ -182,14 +182,20 @@ declare namespace Futari {
     fields: Futari.FormField[]
   }
 
-  /**
-   * 命令执行后的行为指令
-   *
-   * - `'close'` — 关闭 Futari 窗口 (强制，覆盖 WebView 推断)
-   * - `'home'`  — 返回主搜索页 (强制，覆盖 WebView 推断)
-   * - 不返回 (undefined) — 由框架自动判断
-   */
+  /** 命令执行后的行为指令 */
   type CommandOutcome = 'close' | 'home'
+
+  /** 右键上下文菜单项 */
+  interface ContextMenuItem {
+    /** 动作标识 (分隔线留空) */
+    id?: string
+    /** 显示文本 (分隔线留空) */
+    label?: string
+    /** 图标 (emoji 或 SVG) */
+    icon?: string
+    /** 设为 true 表示分隔线 */
+    separator?: boolean
+  }
 
   /**
    * 子命令 — 由 buildCommands 或 getFallbackCommands 根据用户输入动态生成
@@ -205,6 +211,8 @@ declare namespace Futari {
     icon?: string
     /** 搜索结果中显示的预览文本 */
     preview: string
+    /** 右键上下文菜单 (可选) */
+    contextMenu?: ContextMenuItem[]
 
     /**
      * 执行命令
@@ -268,6 +276,13 @@ declare namespace Futari {
      * @param input 用户输入的原始文本 (主搜索框)
      */
     getFallbackCommands?(ctx: PluginContext, input: string): Promise<ICommand[]>
+
+    /** 右键菜单动作分发 (可选)
+     * @param commandId 被右键的命令 ID
+     * @param actionId 菜单项 ID
+     * @param ctx 命令上下文
+     */
+    onContextAction?(commandId: string, actionId: string, ctx: CommandContext): Promise<void>
 
     /**
      * 窗口显示时检查前台窗口，决定是否自动进入子命令模式 (可选)

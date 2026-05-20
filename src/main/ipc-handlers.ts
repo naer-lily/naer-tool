@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, clipboard, shell } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { searchEngine } from '@main/search-engine'
 import { showWindow, hideWindow, getMainWindow, setWindowHeight } from '@main/window-manager'
@@ -6,7 +6,9 @@ import { showScreenToast } from '@main/toast'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
 import { configManager } from '@main/config'
-import { logger } from '@main/logger'
+import { logger, createPluginLogger } from '@main/logger'
+import { pluginHost } from '@main/plugin-host'
+import { companionManager } from '@main/companion-manager'
 
 export function registerIpc(): void {
   ipcMain.handle(IPC.SEARCH, async (_event, payload: { text: string; pluginId?: string }) => {
@@ -86,5 +88,43 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.SET_CONFIG, async (_event, partial: Record<string, unknown>) => {
     configManager.patch(partial)
     return { ok: true }
+  })
+
+  ipcMain.handle(IPC.CONTEXT_ACTION, async (_event, payload: { pluginId: string; commandId: string; actionId: string; input: string }) => {
+    logger.trace('[IPC] CONTEXT_ACTION plugin=%s cmd=%s action=%s', payload.pluginId, payload.commandId, payload.actionId)
+    const plugin = pluginHost.get(payload.pluginId)
+    if (!plugin?.onContextAction) {
+      logger.warn('[IPC] CONTEXT_ACTION plugin not found or no onContextAction: %s', payload.pluginId)
+      return
+    }
+
+    const ctx: Parameters<NonNullable<typeof plugin.onContextAction>>[2] = {
+      input: payload.input,
+      toast: showScreenToast,
+      showForm: async (config) => formDialog.show(config),
+      openWebView: async (config) => webViewManager.open(config),
+      closeWebView: () => webViewManager.close(),
+      clipboard: {
+        writeText: (text) => clipboard.writeText(text),
+        readText: () => clipboard.readText(),
+        writeHTML: (html) => clipboard.writeHTML(html),
+        readHTML: () => clipboard.readHTML(),
+        clear: () => clipboard.clear()
+      },
+      shell: {
+        openExternal: async (url) => shell.openExternal(url),
+        openPath: async (path) => shell.openPath(path),
+        showItemInFolder: (path) => shell.showItemInFolder(path),
+        beep: () => shell.beep()
+      },
+      companions: companionManager.getHandlesForPlugin(payload.pluginId),
+      log: createPluginLogger(payload.pluginId)
+    }
+
+    try {
+      await plugin.onContextAction(payload.commandId, payload.actionId, ctx)
+    } catch (e) {
+      logger.error('[IPC] CONTEXT_ACTION error:', e)
+    }
   })
 }

@@ -3,6 +3,7 @@
     :class="['result-item', { active }]"
     @click="$emit('select', index)"
     @mouseenter="$emit('hover', index)"
+    @contextmenu.prevent="$emit('contextmenu', { index, x: $event.clientX, y: $event.clientY })"
   >
     <span class="item-icon">
       <img v-if="isImg" :src="iconSrc" class="icon-img">
@@ -27,6 +28,7 @@ const props = defineProps<{
 defineEmits<{
   select: [index: number]
   hover: [index: number]
+  contextmenu: [payload: { index: number; x: number; y: number }]
 }>()
 
 const iconSrc = computed(() => props.item.icon || '&#x1F4E6;')

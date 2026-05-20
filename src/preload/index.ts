@@ -58,6 +58,10 @@ const api = {
 
   resizeWindow: (height: number): void => {
     ipcRenderer.send(IPC.RESIZE_WINDOW, height)
+  },
+
+  contextAction: async (pluginId: string, commandId: string, actionId: string, input: string): Promise<void> => {
+    return ipcRenderer.invoke(IPC.CONTEXT_ACTION, { pluginId, commandId, actionId, input })
   }
 }
 

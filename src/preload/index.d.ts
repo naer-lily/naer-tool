@@ -13,6 +13,7 @@ export interface FutariAPI {
   onToggleTheme(cb: () => void): () => void
   log(level: string, ...args: unknown[]): void
   resizeWindow(height: number): void
+  contextAction(pluginId: string, commandId: string, actionId: string, input: string): Promise<void>
 }
 
 declare global {
