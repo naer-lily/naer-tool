@@ -34,6 +34,17 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * ── 架构违规警告 ──
+ *
+ * 本文件直接监听 onAppEvent / 直接调用 resizeWindow，绕过了 useAppState 状态机抽象层。
+ * 右键菜单的 visible 状态、高度变更、信号处理均应属于状态机的职责。
+ *
+ * 当前通过 blur/shortcut 信号的临时监听来弥补上下文菜单残留，
+ * 但正确的做法是将 contextMenu 状态提升至 useAppState，统一在 handleSignal 中处置。
+ *
+ * ⛔ 不要参考本文件的实现模式。  TODO: 等待重构。
+ */
 import { reactive, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import type { SearchResult, ContextMenuItem } from '@shared/plugin-api'
 import ResultItem from '@/components/ResultItem.vue'
