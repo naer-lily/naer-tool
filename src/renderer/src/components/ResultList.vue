@@ -123,12 +123,20 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+let unsubAppEvent: (() => void) | null = null
+
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
+  unsubAppEvent = window.futariAPI.onAppEvent((payload) => {
+    if (payload.type === 'window-blurred' || payload.type === 'shortcut-pressed' || payload.type === 'tray-clicked') {
+      closeMenu()
+    }
+  })
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
+  unsubAppEvent?.()
 })
 </script>
 
