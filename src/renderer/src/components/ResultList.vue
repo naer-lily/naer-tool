@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, onMounted, onBeforeUnmount } from 'vue'
+import { reactive, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import type { SearchResult, ContextMenuItem } from '@shared/plugin-api'
 import ResultItem from '@/components/ResultItem.vue'
 
@@ -59,13 +59,15 @@ const menu = reactive<{
   items: ContextMenuItem[]
   pluginId: string
   commandId: string
+  savedWindowHeight: number
 }>({
   visible: false,
   x: 0,
   y: 0,
   items: [],
   pluginId: '',
-  commandId: ''
+  commandId: '',
+  savedWindowHeight: 0
 })
 
 function onContextMenu(payload: { index: number; x: number; y: number }) {
@@ -77,10 +79,31 @@ function onContextMenu(payload: { index: number; x: number; y: number }) {
   menu.items = item.contextMenu
   menu.x = payload.x
   menu.y = payload.y
+  menu.savedWindowHeight = window.innerHeight
   menu.visible = true
+
+  void nextTick(() => {
+    const menuEl = document.querySelector('.ctx-menu')
+    if (!menuEl) return
+    const rect = menuEl.getBoundingClientRect()
+
+    const rightOverflow = rect.right - window.innerWidth
+    if (rightOverflow > 0) {
+      menu.x = Math.max(0, menu.x - rightOverflow - 8)
+    }
+
+    const bottomOverflow = (rect.bottom + 8) - window.innerHeight
+    if (bottomOverflow > 0) {
+      window.futariAPI.resizeWindow(window.innerHeight + bottomOverflow)
+    }
+  })
 }
 
 function closeMenu() {
+  if (menu.savedWindowHeight > 0 && menu.savedWindowHeight < window.innerHeight) {
+    window.futariAPI.resizeWindow(menu.savedWindowHeight)
+  }
+  menu.savedWindowHeight = 0
   menu.visible = false
 }
 
