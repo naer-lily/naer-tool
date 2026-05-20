@@ -30,7 +30,7 @@ defineEmits<{
 }>()
 
 const iconSrc = computed(() => props.item.icon || '&#x1F4E6;')
-const isImg = computed(() => /^(data:image|https?:)/.test(iconSrc.value))
+const isImg = computed(() => /^(data:image|https?:|file:\/\/)/.test(iconSrc.value))
 </script>
 
 <style scoped>

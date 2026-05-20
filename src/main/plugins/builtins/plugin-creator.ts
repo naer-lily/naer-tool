@@ -22,6 +22,9 @@ function scaffoldJs(pluginName: string, pluginId: string, pluginIcon: string, pr
 
 /**
  * Futari Plugin: ${pluginName}
+ *
+ * Icon 格式: emoji 文字 / 内联 SVG / data:image URI / https:// URL / file:/// 路径 / 本地图片路径
+ *
  * @type {Futari.IPlugin}
  */
 const plugin = {
@@ -46,6 +49,58 @@ module.exports = plugin
 `
 }
 
+function scaffoldTs(pluginName: string, pluginId: string, pluginIcon: string, prefix: string): string {
+  return `/// <reference types="futari-plugin-types" />
+
+/**
+ * Futari Plugin: ${pluginName}
+ *
+ * === 运行时 ===
+ * Futari 使用 esbuild 在内存中编译 .ts → CJS，不产生中间文件。
+ * import 编译为 require()，第三方库正常从 node_modules 查找。
+ *
+ * === 类型 / IDE ===
+ * 同级目录下的 tsconfig.json 仅供 IDE 类型检查，esbuild 不读取。
+ * 已自动生成 tsconfig.json (module: "commonjs")，IDE 不再报 export = 错误。
+ *
+ * === Icon 格式 ===
+ * icon 支持: emoji 文字 / 内联 SVG / data:image URI / https:// URL / file:/// 路径 / 本地图片路径 (.png/.svg/.ico 等)
+ */
+
+const plugin: Futari.IPlugin = {
+  id: '${pluginId}',
+  name: '${pluginName}',
+  icon: '${pluginIcon}',
+  prefix: '${prefix}',
+
+  async onActivate(): Promise<void> {},
+  async onDeactivate(): Promise<void> {},
+
+  async buildCommands(ctx: Futari.PluginContext, input: string): Promise<Futari.ICommand[]> {
+    return []
+  },
+
+  async getFallbackCommands(ctx: Futari.PluginContext, input: string): Promise<Futari.ICommand[]> {
+    return []
+  },
+}
+
+export = plugin
+`
+}
+
+function scaffoldTsconfig(): string {
+  return JSON.stringify({
+    compilerOptions: {
+      target: 'ES2022',
+      module: 'commonjs',
+      strict: true,
+      esModuleInterop: true
+    },
+    include: ['index.ts']
+  }, null, 2) + '\n'
+}
+
 function scaffoldDts(pluginName: string): string {
   return `/**
  * Futari Plugin: ${pluginName}
@@ -66,13 +121,15 @@ export = plugin
 `
 }
 
-function scaffoldPackageJson(pluginName: string, pluginId: string, typesPath: string): string {
+function scaffoldPackageJson(pluginName: string, pluginId: string, lang: 'ts' | 'js', typesPath: string): string {
+  const main = lang === 'ts' ? './index.ts' : './index.js'
+  const types = lang === 'ts' ? './index.ts' : './index.d.ts'
   return JSON.stringify({
     name: pluginId,
     version: '0.1.0',
     description: pluginName,
-    main: './index.js',
-    types: './index.d.ts',
+    main,
+    types,
     dependencies: {},
     devDependencies: {
       'futari-plugin-types': `file:${typesPath.replace(/\\/g, '/')}`
@@ -87,7 +144,11 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
     fields: [
       { type: 'input', key: 'name', label: 'Plugin Name', defaultValue: ctx.input.trim() || '', placeholder: 'My Plugin', required: true },
       { type: 'input', key: 'prefix', label: 'Prefix (optional)', placeholder: 'my', defaultValue: '' },
-      { type: 'input', key: 'icon', label: 'Icon (emoji)', defaultValue: '🔧', placeholder: '🔧' }
+      { type: 'input', key: 'icon', label: 'Icon (emoji)', defaultValue: '🔧', placeholder: '🔧' },
+      { type: 'select', key: 'language', label: 'Language', defaultValue: 'ts', options: [
+        { label: 'TypeScript', value: 'ts' },
+        { label: 'JavaScript', value: 'js' }
+      ]}
     ]
   })
 
@@ -99,6 +160,7 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
   const pluginName = String(result.name || '').trim()
   const prefix = String(result.prefix || '').trim()
   const icon = String(result.icon || '🔧').trim()
+  const language: 'ts' | 'js' = String(result.language || 'ts') === 'js' ? 'js' : 'ts'
 
   if (!pluginName) {
     ctx.toast('Plugin name is required')
@@ -118,9 +180,15 @@ async function createPluginViaForm(ctx: CommandContext): Promise<void> {
       return
     }
     mkdirSync(pluginDir)
-    writeFileSync(join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
-    writeFileSync(join(pluginDir, 'index.d.ts'), scaffoldDts(pluginName), 'utf-8')
-    writeFileSync(join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId, join(app.getAppPath(), 'types')), 'utf-8')
+
+    if (language === 'ts') {
+      writeFileSync(join(pluginDir, 'index.ts'), scaffoldTs(pluginName, pluginId, icon, prefix), 'utf-8')
+      writeFileSync(join(pluginDir, 'tsconfig.json'), scaffoldTsconfig(), 'utf-8')
+    } else {
+      writeFileSync(join(pluginDir, 'index.js'), scaffoldJs(pluginName, pluginId, icon, prefix), 'utf-8')
+      writeFileSync(join(pluginDir, 'index.d.ts'), scaffoldDts(pluginName), 'utf-8')
+    }
+    writeFileSync(join(pluginDir, 'package.json'), scaffoldPackageJson(pluginName, pluginId, language, join(app.getAppPath(), 'types')), 'utf-8')
 
     try {
       await pluginHost.loadFromPath(pluginDir)

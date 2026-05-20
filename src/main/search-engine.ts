@@ -6,6 +6,7 @@ import { logger, createPluginLogger } from '@main/logger'
 import { companionManager } from '@main/companion-manager'
 import { readFileSync, existsSync } from 'fs'
 import { resolve as pathResolve, extname, isAbsolute } from 'path'
+import { fileURLToPath } from 'url'
 import { clipboard, shell } from 'electron'
 import type { SearchResult, SearchResponse, ICommand, CommandContext, CommandOutcome, PluginContext } from '@shared/plugin-api'
 
@@ -29,6 +30,16 @@ const MIME_MAP: Record<string, string> = {
 function resolveIcon(icon: string | undefined): string | undefined {
   if (!icon) return icon
   if (/^(<|data:|https?:)/.test(icon)) return icon
+  if (/^file:\/\//.test(icon)) {
+    try {
+      const filePath = fileURLToPath(icon)
+      const ext = extname(filePath).toLowerCase()
+      if (ext && MIME_MAP[ext] && existsSync(filePath)) {
+        const buf = readFileSync(filePath)
+        return `data:${MIME_MAP[ext]};base64,${buf.toString('base64')}`
+      }
+    } catch { /* fall through */ }
+  }
 
   const ext = extname(icon).toLowerCase()
   if (ext && MIME_MAP[ext]) {

@@ -42,6 +42,7 @@ function rebuildMenu(): void {
       click: () => { void handleUpdateClick() }
     },
     { type: 'separator' },
+    { label: '重新启动', click: () => { app.relaunch(); app.exit() } },
     { label: '退出', click: () => app.quit() }
   ]
   tray.setContextMenu(Menu.buildFromTemplate(template))

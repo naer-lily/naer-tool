@@ -6,21 +6,50 @@
 
 ## 1. 概述
 
-Futari 是一个基于 Electron 的命令启动器。插件系统让你用**纯 JavaScript** 扩展功能。
+Futari 是一个基于 Electron 的命令启动器。插件系统让你用 **JavaScript / TypeScript** 扩展功能。
 
-**每个插件是一个目录**，包含至少 `index.js`（插件代码），推荐搭配 `index.d.ts`（类型提示）和 `package.json`（包信息）。
+**每个插件是一个目录**，包含至少 `index.js`（或 `index.ts`）作为插件代码，推荐搭配 `package.json`（包信息）和 `tsconfig.json`（IDE 类型提示）。
 
 ```
 my-plugin/
-├── index.js        ← 插件入口（必须）
-├── index.d.ts      ← TypeScript 类型声明（推荐，IDE 自动提示）
-├── package.json    ← 包信息、依赖管理（推荐）
+├── index.ts           ← TypeScript 入口（或 index.js）
+├── tsconfig.json      ← IDE 类型提示配置（esbuild 不读取）
+├── index.d.ts         ← JS 插件的类型声明（TS 插件可省略）
+├── package.json       ← 包信息、依赖管理（推荐）
 ├── preload.js      ← WebView 预加载脚本（可选）
 ├── page.html       ← WebView 页面（可选）
 └── lib.js          ← 共享模块（可选）
 ```
 
-### 1.1 类型声明的分发方式
+### 1.2 TypeScript 插件与运行时编译
+
+Futari 支持直接编写 TypeScript 插件（`index.ts`）。运行时使用 **esbuild** 在内存中编译 `.ts` → CJS，整个过程**不产生中间文件、不落盘**——语法转换后直接喂给 Node 执行。
+
+| 关注点 | 说明 |
+|---|---|
+| **运行时编译器** | esbuild（内置于 Futari，无需插件安装额外依赖） |
+| **编译产物** | 纯内存，插件目录始终只有 `.ts` 源文件 |
+| **import 处理** | `import './lib'` → `require('./lib.ts')`，支持相对路径 |
+| **第三方库** | `import * as _ from 'lodash'` → `require('lodash')`，正常走 node_modules |
+| **tsconfig.json** | **仅供 IDE 类型提示用**，esbuild 不读取任何 tsconfig 配置 |
+| **JS 向下兼容** | `.js` 插件无需安装编译器，完全向下兼容 |
+
+插件作者开发时，IDE 的类型安全由 `tsconfig.json` + `futari-plugin-types` 类型包提供。运行时不依赖 `tsconfig.json`，esbuild 仅做语法转换。
+
+建议在 TS 插件目录创建的最小 `tsconfig.json`：
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "include": ["index.ts"]
+}
+```
+
+### 1.3 类型声明的分发方式
 
 Futari 附带一个**本地类型包** `futari-plugin-types`，插件无需手动拷贝 `.d.ts`。插件通过 `package.json` 的 `devDependencies` 引用：
 
@@ -58,9 +87,9 @@ npm install --save-dev "C:/path/to/futari/types"
 
 ---
 
-## 3. 插件入口文件 (index.js)
+## 3. 插件入口文件 (index.js / index.ts)
 
-### 3.1 最小示例
+### 3.1 最小示例 (JavaScript)
 
 ```javascript
 // index.js
@@ -91,13 +120,46 @@ const plugin = {
 module.exports = plugin
 ```
 
-### 3.2 插件对象结构
+### 3.2 最小示例 (TypeScript)
+
+```typescript
+/// <reference types="futari-plugin-types" />
+
+// index.ts — esbuild 在运行时内存编译，tsconfig.json 仅供 IDE 提示
+const plugin: Futari.IPlugin = {
+  id: 'my-plugin',
+  name: '我的插件',
+  icon: '🔧',
+  prefix: 'my',
+
+  async onActivate(): Promise<void> {},
+  async onDeactivate(): Promise<void> {},
+
+  async buildCommands(ctx: Futari.PluginContext, input: string): Promise<Futari.ICommand[]> {
+    return [
+      {
+        id: 'hello',
+        name: '打招呼',
+        icon: '👋',
+        preview: `你好 ${input || '世界'}`,
+        execute(ctx: Futari.CommandContext): void {
+          ctx.toast(`你好，${ctx.input || '世界'}！`)
+        }
+      }
+    ]
+  }
+}
+
+export = plugin
+```
+
+### 3.3 插件对象结构
 
 ```typescript
 interface IPlugin {
   id: string              // 唯一标识（如 'my-plugin'）
   name: string            // 显示名称
-  icon: string            // emoji 或 SVG 字符串
+  icon: string            // emoji / 内联 SVG / data:image / https: URL / file: 路径 / 本地图片路径
   prefix?: string         // 激活子命令的前缀（输入 "my " 进入）
 
   onActivate(ctx): Promise<void>    // 加载/重载时调用

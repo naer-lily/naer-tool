@@ -9,7 +9,7 @@ Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.
 ## Features
 
 - **Global shortcut** (`Alt+Space`) — summon the search bar from anywhere
-- **Plugin system** — extend with `require()`-based plugins, built-in or user-supplied
+- **Plugin system** — extend with `require()`-based plugins, JavaScript or TypeScript (runtime-compiled via esbuild)
 - **Prefix subcommand mode** — type `=` for calculator, `>` to run commands, `hi` for greetings
 - **Auto-activate** — detects foreground app and auto-enters matching plugin's subcommand
 - **Home screen** — shows available plugins and global commands on empty input; filterable by typing
@@ -28,7 +28,7 @@ Inspired by PowerToys Run and espanso. Built with Electron + Vue 3 + TypeScript.
 | Calculator | `=` | Evaluate math expressions safely |
 | RunCommand | `>` | Execute system commands with timeout |
 | Hello | `hi` | Demo plugin: greet, WebView tests, multi-file dev demo |
-| Plugin Creator | — | Fallback: scaffold new user plugins (`index.js` + `index.d.ts` + `package.json`) |
+| Plugin Creator | — | Fallback: scaffold new user plugins (JS or TS, `package.json`) |
 | Reload | — | Fallback: reload all user plugins (match `reload` / `重载`) |
 
 ## Dev
