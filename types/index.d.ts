@@ -291,5 +291,3 @@ declare namespace Futari {
 declare function staticCommands(defs: Futari.StaticCommandDef[]): (ctx: Futari.PluginContext, input: string) => Promise<Futari.ICommand[]>
 
 declare const plugin: Futari.IPlugin
-export default plugin
-export { staticCommands }

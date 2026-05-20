@@ -18,11 +18,12 @@ function generatePluginId(name: string): string {
 }
 
 function scaffoldJs(pluginName: string, pluginId: string, pluginIcon: string, prefix: string): string {
-  return `/**
- * Futari Plugin: ${pluginName}
- * @type {import('futari-plugin-types').default}
- */
+  return `/// <reference types="futari-plugin-types" />
 
+/**
+ * Futari Plugin: ${pluginName}
+ * @type {Futari.IPlugin}
+ */
 const plugin = {
   id: '${pluginId}',
   name: '${pluginName}',
