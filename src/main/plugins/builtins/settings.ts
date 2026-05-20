@@ -35,7 +35,7 @@ async function openSettings(ctx: CommandContext): Promise<void> {
 
   const result = await ctx.openWebView({
     url,
-    height: 620,
+    height: 480,
     injectBaseStyles: true
   })
 
