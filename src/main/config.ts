@@ -11,7 +11,7 @@ export interface FutariConfig {
   windowTopRatio?: number
   windowWidth?: number
   scale?: number
-  disabledPlugins?: string[]
+  enabledPlugins?: string[]
   lastUpdateCheck?: number
   skipVersion?: string
 }

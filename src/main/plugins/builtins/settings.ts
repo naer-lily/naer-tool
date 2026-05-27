@@ -3,7 +3,7 @@ import { join } from 'path'
 import { exec } from 'child_process'
 import type { IPlugin, ICommand, PluginContext, CommandContext } from '@shared/plugin-api'
 import { app, shell } from 'electron'
-import { configManager } from '@main/config'
+import { configManager, type FutariConfig } from '@main/config'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
 import { applyScale } from '@main/window-manager'
@@ -13,13 +13,13 @@ const LOG_PATH = join(homedir(), '.futari', 'logs', 'main.log')
 async function openSettings(ctx: CommandContext): Promise<void> {
   const htmlPath = join(app.getAppPath(), 'resources', 'settings.html')
   const cfg = configManager.getRaw()
-  const disabledSet = new Set(cfg.disabledPlugins || [])
+  const enabledSet = cfg.enabledPlugins !== undefined ? new Set(cfg.enabledPlugins) : null
 
   const builtinPlugins = pluginHost.getAllRaw().map((p: { id: string; name: string; icon: string }) => ({
     id: p.id,
     name: p.name,
     icon: p.icon,
-    disabled: disabledSet.has(p.id) && p.id !== 'settings'
+    enabled: enabledSet === null ? true : enabledSet.has(p.id)
   }))
 
   const hash = encodeURIComponent(JSON.stringify({
@@ -35,7 +35,7 @@ async function openSettings(ctx: CommandContext): Promise<void> {
 
   const result = await ctx.openWebView({
     url,
-    height: 480,
+    height: 500,
     injectBaseStyles: true
   })
 
@@ -50,14 +50,20 @@ async function openSettings(ctx: CommandContext): Promise<void> {
   const windowTopRatio = typeof data.windowTopRatio === 'number' ? data.windowTopRatio : 0.12
   const scale = typeof data.scale === 'number' ? data.scale : 1.0
   const windowWidth = typeof data.windowWidth === 'number' ? data.windowWidth : 800
-  const disabledPlugins = Array.isArray(data.disabledPlugins) ? data.disabledPlugins.filter(id => id !== 'settings') as string[] : undefined
+  const enabledPlugins = Array.isArray(data.enabledPlugins)
+    ? (data.enabledPlugins as string[]).filter(id => id !== 'settings')
+    : undefined
 
   if (!shortcut) return
 
-  configManager.patch({ shortcut, theme, launchAtStartup, windowTopRatio, scale, windowWidth, disabledPlugins })
+  const patch: Partial<FutariConfig> = { shortcut, theme, launchAtStartup, windowTopRatio, scale, windowWidth }
+  if (enabledPlugins !== undefined) {
+    patch.enabledPlugins = enabledPlugins
+  }
+  configManager.patch(patch)
 
-  if (disabledPlugins !== undefined) {
-    pluginHost.setDisabledBuiltins(disabledPlugins)
+  if (enabledPlugins !== undefined) {
+    pluginHost.setEnabledBuiltins(enabledPlugins)
     prefixRegistry.rebuild()
   }
 
