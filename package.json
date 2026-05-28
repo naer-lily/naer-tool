@@ -1,6 +1,6 @@
 {
   "name": "futari",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Futari - Plugin-based command launcher",
   "main": "./out/main/index.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "electron-log": "^5.4.4",
     "esbuild": "^0.21.5",
     "iconv-lite": "^0.7.2",
+    "marked": "^4.3.0",
     "vue": "^3.4.38"
   },
   "devDependencies": {

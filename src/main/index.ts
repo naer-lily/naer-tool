@@ -16,6 +16,7 @@ import settingsPlugin from '@main/plugins/builtins/settings'
 import ctoolPlugin from '@main/plugins/builtins/ctool'
 import everythingPlugin from '@main/plugins/builtins/everything'
 import bookmarkPlugin from '@main/plugins/builtins/bookmark'
+import stickyPlugin from '@main/plugins/builtins/sticky'
 
 async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(calculatorPlugin, 'calculator')
@@ -25,6 +26,7 @@ async function registerBuiltinPlugins(): Promise<void> {
   await pluginHost.activateBuiltin(ctoolPlugin, 'ctool')
   await pluginHost.activateBuiltin(everythingPlugin, 'everything')
   await pluginHost.activateBuiltin(bookmarkPlugin, 'bookmark')
+  await pluginHost.activateBuiltin(stickyPlugin, 'sticky')
 }
 
 async function loadUserPlugins(): Promise<void> {

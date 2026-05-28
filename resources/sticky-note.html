@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Futari Sticky Note</title>
+<style>
+  :root {
+    --note-bg: #2d2d2d;
+    --note-text: #e0e0e0;
+    --note-toolbar-bg: #1e1e1e;
+    --note-border: #3a3a3a;
+    --note-muted: #666;
+    --note-code-bg: #3a3a3a;
+    --note-pre-bg: #1a1a1a;
+    --note-hover: #3a3a3a;
+    --note-accent: #89b4fa;
+    --note-danger-hover: #5c1a1a;
+    --note-danger-text: #f38ba8;
+    --note-empty: #555;
+  }
+
+  [data-theme="light"] {
+    --note-bg: #f0f0f0;
+    --note-text: #1a1a1a;
+    --note-toolbar-bg: #e3e3e3;
+    --note-border: #d0d0d0;
+    --note-muted: #999;
+    --note-code-bg: #e4e4e4;
+    --note-pre-bg: #ebebeb;
+    --note-hover: #e0e0e0;
+    --note-accent: #4a90d9;
+    --note-danger-hover: #fdd;
+    --note-danger-text: #c0392b;
+    --note-empty: #aaa;
+  }
+
+  [data-theme="dark"] {
+    --note-bg: #2d2d2d;
+    --note-text: #e0e0e0;
+    --note-toolbar-bg: #1e1e1e;
+    --note-border: #3a3a3a;
+    --note-muted: #666;
+    --note-code-bg: #3a3a3a;
+    --note-pre-bg: #1a1a1a;
+    --note-hover: #3a3a3a;
+    --note-accent: #89b4fa;
+    --note-danger-hover: #5c1a1a;
+    --note-danger-text: #f38ba8;
+    --note-empty: #555;
+  }
+
+  /* Color 1: Warm Yellow */
+  [data-theme="light"] .note-color-1 {
+    --note-bg: #fffde7; --note-text: #3e3500; --note-toolbar-bg: #fff9c4;
+    --note-border: #fdd835; --note-muted: #9e8c00; --note-code-bg: #fff176;
+    --note-pre-bg: #fff9c4; --note-hover: #fff176; --note-empty: #b8a000;
+  }
+  [data-theme="dark"] .note-color-1 {
+    --note-bg: #4a3800; --note-text: #fff9c4; --note-toolbar-bg: #3b2d00;
+    --note-border: #6d5600; --note-muted: #b8a400; --note-code-bg: #5c4600;
+    --note-pre-bg: #3b2d00; --note-hover: #5c4600; --note-empty: #8a7a00;
+  }
+
+  /* Color 2: Light Blue */
+  [data-theme="light"] .note-color-2 {
+    --note-bg: #e3f2fd; --note-text: #00254d; --note-toolbar-bg: #bbdefb;
+    --note-border: #64b5f6; --note-muted: #4f7aa4; --note-code-bg: #90caf9;
+    --note-pre-bg: #bbdefb; --note-hover: #90caf9; --note-empty: #6a8eb8;
+  }
+  [data-theme="dark"] .note-color-2 {
+    --note-bg: #002d55; --note-text: #bbdefb; --note-toolbar-bg: #002144;
+    --note-border: #0050a0; --note-muted: #6a9ec8; --note-code-bg: #003a6b;
+    --note-pre-bg: #002144; --note-hover: #003a6b; --note-empty: #406a90;
+  }
+
+  /* Color 3: Light Green */
+  [data-theme="light"] .note-color-3 {
+    --note-bg: #e8f5e9; --note-text: #002a00; --note-toolbar-bg: #c8e6c9;
+    --note-border: #81c784; --note-muted: #5a8a5c; --note-code-bg: #a5d6a7;
+    --note-pre-bg: #c8e6c9; --note-hover: #a5d6a7; --note-empty: #6a9a6c;
+  }
+  [data-theme="dark"] .note-color-3 {
+    --note-bg: #142a14; --note-text: #c8e6c9; --note-toolbar-bg: #0e200e;
+    --note-border: #2a5a2a; --note-muted: #6aaa6c; --note-code-bg: #1d3d1d;
+    --note-pre-bg: #0e200e; --note-hover: #1d3d1d; --note-empty: #4a7a4c;
+  }
+
+  /* Color 4: Soft Pink */
+  [data-theme="light"] .note-color-4 {
+    --note-bg: #fce4ec; --note-text: #3d0010; --note-toolbar-bg: #f8bbd0;
+    --note-border: #f06292; --note-muted: #a04060; --note-code-bg: #f48fb1;
+    --note-pre-bg: #f8bbd0; --note-hover: #f48fb1; --note-empty: #c06080;
+  }
+  [data-theme="dark"] .note-color-4 {
+    --note-bg: #4a1525; --note-text: #f8bbd0; --note-toolbar-bg: #3b101d;
+    --note-border: #802a40; --note-muted: #c06080; --note-code-bg: #5d1d30;
+    --note-pre-bg: #3b101d; --note-hover: #5d1d30; --note-empty: #904060;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: var(--note-bg);
+    color: var(--note-text);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow: hidden;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 30px;
+    padding: 0 8px;
+    background: var(--note-toolbar-bg);
+    -webkit-app-region: drag;
+    user-select: none;
+    border-bottom: 1px solid var(--note-border);
+    transition: background 0.2s;
+  }
+
+  .drag-title {
+    font-size: 11px;
+    color: var(--note-muted);
+    font-weight: 500;
+  }
+
+  .toolbar-buttons {
+    display: flex;
+    gap: 1px;
+    -webkit-app-region: no-drag;
+  }
+
+  .toolbar-btn {
+    background: none;
+    border: none;
+    color: var(--note-muted);
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+  }
+
+  .toolbar-btn:hover { background: var(--note-hover); color: var(--note-text); }
+  .toolbar-btn.active { color: var(--note-accent); }
+  .toolbar-btn.danger:hover { background: var(--note-danger-hover); color: var(--note-danger-text); }
+
+  .content-area {
+    height: calc(100% - 30px);
+    overflow: hidden;
+  }
+
+  .view-mode {
+    height: 100%;
+    overflow-y: auto;
+    padding: 12px 16px;
+    cursor: default;
+  }
+
+  .edit-mode {
+    display: none;
+    width: 100%;
+    height: 100%;
+    background: var(--note-pre-bg);
+    color: var(--note-text);
+    border: none;
+    resize: none;
+    padding: 12px 16px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    outline: none;
+  }
+
+  .edit-mode::placeholder { color: var(--note-empty); }
+
+  .rendered h1 { font-size: 1.3em; margin: 0.6em 0 0.3em; border-bottom: 1px solid var(--note-border); padding-bottom: 0.2em; }
+  .rendered h2 { font-size: 1.15em; margin: 0.5em 0 0.25em; }
+  .rendered h3 { font-size: 1.05em; margin: 0.4em 0 0.2em; }
+  .rendered h4, .rendered h5, .rendered h6 { font-size: 1em; margin: 0.3em 0 0.15em; }
+  .rendered p { margin: 0.3em 0; }
+  .rendered ul, .rendered ol { padding-left: 1.5em; margin: 0.3em 0; }
+  .rendered li { margin: 0.15em 0; }
+  .rendered li:has(input[type="checkbox"]) { list-style: none; margin-left: -0.8em; }
+  .rendered input[type="checkbox"] {
+    margin-right: 6px;
+    accent-color: var(--note-accent);
+    width: 14px; height: 14px;
+    cursor: pointer;
+  }
+  .rendered code {
+    background: var(--note-code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  }
+  .rendered pre {
+    background: var(--note-pre-bg);
+    padding: 10px 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.4em 0;
+  }
+  .rendered pre code { background: none; padding: 0; }
+  .rendered blockquote {
+    border-left: 3px solid var(--note-border);
+    margin: 0.3em 0;
+    padding: 0.1em 0 0.1em 12px;
+    color: var(--note-muted);
+  }
+  .rendered a { color: var(--note-accent); text-decoration: none; }
+  .rendered a:hover { text-decoration: underline; }
+  .rendered table { border-collapse: collapse; width: 100%; margin: 0.4em 0; }
+  .rendered th, .rendered td { border: 1px solid var(--note-border); padding: 4px 8px; text-align: left; }
+  .rendered th { background: var(--note-toolbar-bg); }
+  .rendered hr { border: none; border-top: 1px solid var(--note-border); margin: 0.8em 0; }
+  .rendered strong { color: var(--note-text); }
+  .rendered del { color: var(--note-muted); }
+  .rendered img { max-width: 100%; }
+
+  .view-mode::-webkit-scrollbar, .edit-mode::-webkit-scrollbar { width: 6px; }
+  .view-mode::-webkit-scrollbar-track, .edit-mode::-webkit-scrollbar-track { background: transparent; }
+  .view-mode::-webkit-scrollbar-thumb, .edit-mode::-webkit-scrollbar-thumb {
+    background: rgba(128,128,128,0.3);
+    border-radius: 3px;
+  }
+  .view-mode::-webkit-scrollbar-thumb:hover, .edit-mode::-webkit-scrollbar-thumb:hover {
+    background: rgba(128,128,128,0.5);
+  }
+
+  .empty-hint {
+    color: var(--note-empty);
+    font-style: italic;
+    text-align: center;
+    padding-top: 60px;
+    user-select: none;
+  }
+</style>
+</head>
+<body class="note-color-0">
+<div class="toolbar">
+  <span class="drag-title">便签</span>
+  <div class="toolbar-buttons">
+    <button class="toolbar-btn btn-ontop active" title="置顶">&#x1F4CC;</button>
+    <button class="toolbar-btn btn-color" title="换色">&#x1F3A8;</button>
+    <button class="toolbar-btn btn-lock" title="编辑">&#x1F512;</button>
+    <button class="toolbar-btn danger btn-delete" title="删除">&#x1F5D1;</button>
+    <button class="toolbar-btn danger btn-close" title="关闭">&#x2715;</button>
+  </div>
+</div>
+<div class="content-area">
+  <div class="view-mode rendered locked"></div>
+  <textarea class="edit-mode" placeholder="输入 Markdown..."></textarea>
+</div>
+<script>
+  (function() {
+    var ipcRenderer = require('electron').ipcRenderer
+    var marked = require('marked')
+    marked.setOptions({ gfm: true, breaks: false })
+
+    var noteId = ''
+    var noteContent = ''
+    var locked = true
+    var stayOnTop = true
+    var colorIdx = 0
+
+    var viewEl = document.querySelector('.view-mode')
+    var editEl = document.querySelector('.edit-mode')
+    var btnLock = document.querySelector('.btn-lock')
+    var btnOnTop = document.querySelector('.btn-ontop')
+    var btnColor = document.querySelector('.btn-color')
+    var bodyEl = document.body
+
+    function renderMarkdown(content) {
+      if (!content.trim()) {
+        viewEl.innerHTML = '<div class="empty-hint">双击编辑内容</div>'
+        return
+      }
+      var html = marked.parse(content)
+      viewEl.innerHTML = html
+
+      var checkboxes = viewEl.querySelectorAll('input[type="checkbox"]')
+      var lines = content.split('\n')
+      var cbLines = []
+      for (var i = 0; i < lines.length; i++) {
+        if (/^\s*[-*+]\s+\[[ x]\]/.test(lines[i])) {
+          cbLines.push(i)
+        }
+      }
+      for (var j = 0; j < checkboxes.length; j++) {
+        if (j < cbLines.length) {
+          checkboxes[j].dataset.lineIndex = cbLines[j]
+          checkboxes[j].addEventListener('change', handleCheckboxChange)
+        }
+      }
+    }
+
+    function handleCheckboxChange(e) {
+      var cb = e.target
+      var lineIndex = parseInt(cb.dataset.lineIndex)
+      if (isNaN(lineIndex)) return
+      var lines = noteContent.split('\n')
+      if (lineIndex >= lines.length) return
+      var scrollTop = viewEl.scrollTop
+      if (cb.checked) {
+        lines[lineIndex] = lines[lineIndex].replace(/\[ \]/, '[x]')
+      } else {
+        lines[lineIndex] = lines[lineIndex].replace(/\[x\]/, '[ ]')
+      }
+      noteContent = lines.join('\n')
+      renderMarkdown(noteContent)
+      viewEl.scrollTop = scrollTop
+      saveContent()
+    }
+
+    function saveContent() {
+      ipcRenderer.send('sticky:save', { id: noteId, content: noteContent })
+    }
+
+    function setEditMode(enabled) {
+      if (enabled) {
+        locked = false
+        viewEl.style.display = 'none'
+        editEl.style.display = 'block'
+        editEl.value = noteContent
+        editEl.focus()
+        btnLock.textContent = '\u270F\uFE0F'
+        btnLock.classList.add('active')
+      } else {
+        locked = true
+        noteContent = editEl.value
+        editEl.style.display = 'none'
+        viewEl.style.display = 'block'
+        renderMarkdown(noteContent)
+        saveContent()
+        btnLock.textContent = '\uD83D\uDD12'
+        btnLock.classList.remove('active')
+      }
+    }
+
+    btnLock.addEventListener('click', function() { setEditMode(locked) })
+    viewEl.addEventListener('dblclick', function() { setEditMode(true) })
+    editEl.addEventListener('blur', function() {
+      if (!locked) setEditMode(false)
+    })
+    editEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { e.preventDefault(); setEditMode(false) }
+    })
+
+    btnOnTop.addEventListener('click', function() {
+      stayOnTop = !stayOnTop
+      btnOnTop.classList.toggle('active', stayOnTop)
+      ipcRenderer.send('sticky:toggle-ontop', { id: noteId, stayOnTop: stayOnTop })
+    })
+
+    btnColor.addEventListener('click', function() {
+      bodyEl.classList.remove('note-color-' + colorIdx)
+      colorIdx = (colorIdx + 1) % 5
+      bodyEl.classList.add('note-color-' + colorIdx)
+      ipcRenderer.send('sticky:set-color', { id: noteId, color: colorIdx })
+    })
+
+    document.querySelector('.btn-close').addEventListener('click', function() {
+      ipcRenderer.send('sticky:close', { id: noteId })
+    })
+
+    document.querySelector('.btn-delete').addEventListener('click', function() {
+      ipcRenderer.send('sticky:delete', { id: noteId })
+    })
+
+    window.__initStickyNote = function(data) {
+      noteId = data.id
+      noteContent = data.content || ''
+      stayOnTop = data.stayOnTop !== false
+      colorIdx = data.color || 0
+
+      document.documentElement.setAttribute('data-theme', data.theme || 'dark')
+      bodyEl.classList.remove('note-color-0')
+      bodyEl.classList.add('note-color-' + colorIdx)
+
+      btnOnTop.classList.toggle('active', stayOnTop)
+      renderMarkdown(noteContent)
+
+      if (data.startEdit) {
+        setEditMode(true)
+      }
+    }
+  })()
+</script>
+</body>
+</html>
