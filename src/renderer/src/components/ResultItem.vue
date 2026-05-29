@@ -45,6 +45,10 @@ const isImg = computed(() => /^(data:image|https?:|file:\/\/)/.test(iconSrc.valu
   transition: background 0.08s;
 }
 
+.result-item:nth-child(even) {
+  background: var(--bg-zebra);
+}
+
 .result-item.active {
   background: var(--bg-active);
 }

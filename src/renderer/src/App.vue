@@ -46,7 +46,7 @@ import { useSearch } from '@/composables/useSearch'
 import { useKeyboardNav } from '@/composables/useKeyboardNav'
 import { useTheme } from '@/composables/useTheme'
 
-const { toggle } = useTheme()
+const { toggle, init: initTheme, setTheme } = useTheme()
 const {
   query, results, activeIndex, toast,
   searchMode, activePluginIcon,
@@ -90,6 +90,14 @@ async function onContextAction(payload: { pluginId: string; commandId: string; a
 }
 
 onMounted(() => {
+  initTheme()
+  void window.futariAPI.getConfig().then(cfg => {
+    const t = cfg.theme
+    if (t === 'light' || t === 'dark') {
+      setTheme(t)
+    }
+  })
+
   setFocusCallback(() => {
     void nextTick(() => searchInputRef.value?.focusInput())
   })

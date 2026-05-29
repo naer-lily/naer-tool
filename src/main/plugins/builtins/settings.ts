@@ -6,7 +6,7 @@ import { app, shell } from 'electron'
 import { configManager, type FutariConfig } from '@main/config'
 import { pluginHost } from '@main/plugin-host'
 import { prefixRegistry } from '@main/prefix-registry'
-import { applyScale } from '@main/window-manager'
+import { applyScale, getMainWindow } from '@main/window-manager'
 
 const LOG_PATH = join(homedir(), '.futari', 'logs', 'main.log')
 
@@ -68,6 +68,11 @@ async function openSettings(ctx: CommandContext): Promise<void> {
   }
 
   applyScale(scale)
+
+  const win = getMainWindow()
+  if (win) {
+    win.webContents.send('toggle-theme')
+  }
 
   ctx.toast('Settings saved. Restart Futari to apply shortcut and top-ratio changes.')
 }

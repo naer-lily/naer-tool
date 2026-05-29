@@ -1,8 +1,9 @@
 :root {
   --bg-primary: #f0f0f0;
   --bg-input: #e8e8e8;
-  --bg-hover: rgba(0, 0, 0, 0.05);
-  --bg-active: rgba(0, 0, 0, 0.09);
+--bg-hover: rgba(0, 0, 0, 0.05);
+--bg-active: rgba(0, 0, 0, 0.09);
+--bg-zebra: rgba(0, 0, 0, 0.025);
 
   --text-primary: #1a1a1a;
   --text-secondary: #5a5a5a;
@@ -26,8 +27,9 @@
 [data-theme='dark'] {
   --bg-primary: #252525;
   --bg-input: #1e1e1e;
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-active: rgba(255, 255, 255, 0.1);
+--bg-hover: rgba(255, 255, 255, 0.06);
+--bg-active: rgba(255, 255, 255, 0.1);
+--bg-zebra: rgba(255, 255, 255, 0.025);
 
   --text-primary: #e8e8e8;
   --text-secondary: #a0a0a0;

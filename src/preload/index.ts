@@ -62,6 +62,10 @@ const api = {
 
   contextAction: async (pluginId: string, commandId: string, actionId: string, input: string): Promise<void> => {
     return ipcRenderer.invoke(IPC.CONTEXT_ACTION, { pluginId, commandId, actionId, input })
+  },
+
+  getConfig: async (): Promise<Record<string, unknown>> => {
+    return ipcRenderer.invoke(IPC.GET_CONFIG)
   }
 }
 

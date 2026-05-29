@@ -14,6 +14,7 @@ export interface FutariAPI {
   log(level: string, ...args: unknown[]): void
   resizeWindow(height: number): void
   contextAction(pluginId: string, commandId: string, actionId: string, input: string): Promise<void>
+  getConfig(): Promise<Record<string, unknown>>
 }
 
 declare global {

@@ -1,7 +1,7 @@
 import { ipcMain, clipboard, shell } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { searchEngine } from '@main/search-engine'
-import { showWindow, hideWindow, getMainWindow, setWindowHeight } from '@main/window-manager'
+import { showWindow, hideWindow, setWindowHeight } from '@main/window-manager'
 import { showScreenToast } from '@main/toast'
 import { formDialog } from '@main/form-dialog'
 import { webViewManager } from '@main/web-view-manager'
@@ -49,8 +49,7 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle(IPC.GET_THEME, async () => {
-    const win = getMainWindow()
-    return win?.webContents.executeJavaScript('localStorage.getItem("futari-theme") || "dark"')
+    return configManager.getTheme()
   })
 
   ipcMain.on(IPC.WEB_VIEW_INPUT, (_event, text: string) => {

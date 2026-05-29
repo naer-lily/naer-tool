@@ -2,12 +2,12 @@ import { BrowserWindow } from 'electron'
 import type { FormConfig } from '@shared/plugin-api'
 import { configManager } from '@main/config'
 
-function buildFormHtml(config: FormConfig): string {
+function buildFormHtml(config: FormConfig, theme: 'light' | 'dark'): string {
   const fieldsHtml = config.fields.map(f => buildFieldHtml(f)).join('\n')
 
   return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-html{color-scheme:dark}
+<html data-theme="${theme}"><head><meta charset="utf-8"><style>
+:root{--bg:#202020;--t1:#e8e8e8;--t2:#999;--bd:rgba(255,255,255,0.08);--dv:rgba(255,255,255,0.06);--hv:rgba(255,255,255,0.06);--ib:rgba(255,255,255,0.05);--opt-bg:#2a2a2a;color-scheme:dark}[data-theme="light"]{--bg:#f0f0f0;--t1:#1a1a1a;--t2:#5a5a5a;--bd:rgba(0,0,0,0.1);--dv:rgba(0,0,0,0.07);--hv:rgba(0,0,0,0.05);--ib:rgba(0,0,0,0.04);--opt-bg:#fff;color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);overflow:hidden;user-select:none}
 .win{width:100vw;height:100vh;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bd);overflow:hidden}
@@ -24,10 +24,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',s
 .btn-cancel:hover{background:var(--bd)}
 .field{display:flex;flex-direction:column;gap:3px}
 .field label{font-size:11px;color:var(--t2)}
-.field input,.field select,.field textarea{width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--ib);color:var(--t1);font-size:13px;font-family:inherit;outline:none;color-scheme:dark}
+.field input,.field select,.field textarea{width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--bd);background:var(--ib);color:var(--t1);font-size:13px;font-family:inherit;outline:none}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:#1677ff}
 .field input:disabled,.field select:disabled,.field textarea:disabled{opacity:.5}
-.field select option{background:#2a2a2a;color:var(--t1)}
+.field select option{background:var(--opt-bg);color:var(--t1)}
 .field textarea{resize:vertical;min-height:60px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .chip{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--t1)}
@@ -45,7 +45,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',s
 .switch-wrap{display:flex;align-items:center;gap:8px}
 .switch-wrap label{font-size:12px;color:var(--t1)}
 </style></head>
-<body style="--bg:#202020;--t1:#e8e8e8;--t2:#999;--bd:rgba(255,255,255,0.08);--dv:rgba(255,255,255,0.06);--hv:rgba(255,255,255,0.06);--ib:rgba(255,255,255,0.05);color-scheme:dark">
+<body>
 <div class="win">
 <div class="title-bar"><span>${escapeHtml(config.title)}</span><button onclick="window.close()">✕</button></div>
 <div class="body">${fieldsHtml}</div>
@@ -150,6 +150,7 @@ class FormDialogManager {
     const fieldCount = config.fields.length
     const baseHeight = 130 + fieldCount * 48
     const scale = configManager.getScale()
+    const theme = configManager.getTheme()
     const width = Math.round(baseWidth * scale)
     const height = Math.round(baseHeight * scale)
 
@@ -158,7 +159,7 @@ class FormDialogManager {
       height,
       frame: false,
       transparent: false,
-      backgroundColor: '#202020',
+      backgroundColor: theme === 'light' ? '#f0f0f0' : '#202020',
       alwaysOnTop: true,
       resizable: false,
       skipTaskbar: true,
@@ -186,7 +187,7 @@ class FormDialogManager {
         }
       })
 
-      void formWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildFormHtml(config))}`)
+      void formWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildFormHtml(config, theme))}`)
     })
   }
 
