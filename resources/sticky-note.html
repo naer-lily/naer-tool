@@ -127,10 +127,10 @@
 
   .toolbar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     height: 30px;
-    padding: 0 8px;
+    padding: 0 6px;
     background: var(--note-toolbar-bg);
     -webkit-app-region: drag;
     user-select: none;
@@ -138,7 +138,18 @@
     transition: background 0.2s;
   }
 
-  .toolbar-buttons {
+  .toolbar-left {
+    display: flex;
+    gap: 1px;
+    -webkit-app-region: no-drag;
+  }
+
+  .toolbar-spacer {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toolbar-right {
     display: flex;
     gap: 1px;
     -webkit-app-region: no-drag;
@@ -162,6 +173,8 @@
 
   .toolbar-btn:hover { background: var(--note-hover); color: var(--note-text); }
   .toolbar-btn.danger:hover { background: var(--note-danger-hover); color: var(--note-danger-text); }
+
+  .toolbar-btn.hidden { display: none; }
 
   .content-area {
     height: calc(100% - 30px);
@@ -255,7 +268,7 @@
     user-select: none;
   }
 
-  /* Context menu */
+  /* --- Context menu --- */
   .context-menu {
     display: none;
     position: fixed;
@@ -264,7 +277,7 @@
     border: 1px solid var(--note-border);
     border-radius: 6px;
     padding: 4px 0;
-    min-width: 140px;
+    min-width: 180px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.25);
     user-select: none;
   }
@@ -289,11 +302,57 @@
     background: var(--note-border);
     margin: 4px 0;
   }
+
+  .context-menu-slider {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: default;
+  }
+
+  .context-menu-slider-label {
+    font-size: 11px;
+    color: var(--note-muted);
+    white-space: nowrap;
+  }
+
+  .context-menu-slider-track {
+    flex: 1;
+    height: 4px;
+    background: var(--note-border);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .context-menu-slider-fill {
+    height: 100%;
+    background: var(--note-accent);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  .context-menu-slider-thumb {
+    position: absolute;
+    top: -5px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--note-text);
+    border: 2px solid var(--note-accent);
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
 </style>
 </head>
 <body class="note-color-0">
-<div class="toolbar">
-  <div class="toolbar-buttons">
+<div class="toolbar" id="toolbarEl">
+  <div class="toolbar-left">
+    <button class="toolbar-btn btn-lock" title="锁定">&#x1F513;</button>
+  </div>
+  <div class="toolbar-spacer"></div>
+  <div class="toolbar-right" id="toolbarRightEl">
     <button class="toolbar-btn btn-color" title="换色">&#x1F3A8;</button>
     <button class="toolbar-btn danger btn-close" title="关闭">&#x2715;</button>
   </div>
@@ -306,6 +365,15 @@
   <div class="context-menu-item" data-action="duplicate">&#x1F4CB; 复制便签</div>
   <div class="context-menu-separator"></div>
   <div class="context-menu-item" data-action="delete">&#x1F5D1; 删除</div>
+  <div class="context-menu-separator"></div>
+  <div class="context-menu-slider" id="opacitySlider">
+    <span class="context-menu-slider-label">不透明度</span>
+    <div class="context-menu-slider-track" id="opacityTrack">
+      <div class="context-menu-slider-fill" id="opacityFill"></div>
+      <div class="context-menu-slider-thumb" id="opacityThumb"></div>
+    </div>
+    <span class="context-menu-slider-label" id="opacityVal">100%</span>
+  </div>
 </div>
 <script>
   (function() {
@@ -315,14 +383,26 @@
 
     var noteId = ''
     var noteContent = ''
-    var locked = true
+    var isLocked = false
+    var isEditing = false
     var colorIdx = 0
+    var opacity = 1.0
 
     var viewEl = document.querySelector('.view-mode')
     var editEl = document.querySelector('.edit-mode')
+    var btnLock = document.querySelector('.btn-lock')
     var btnColor = document.querySelector('.btn-color')
+    var btnClose = document.querySelector('.btn-close')
+    var toolbarEl = document.getElementById('toolbarEl')
+    var toolbarRightEl = document.getElementById('toolbarRightEl')
     var bodyEl = document.body
     var ctxMenu = document.getElementById('ctxMenu')
+
+    var opacityTrack = document.getElementById('opacityTrack')
+    var opacityFill = document.getElementById('opacityFill')
+    var opacityThumb = document.getElementById('opacityThumb')
+    var opacityValEl = document.getElementById('opacityVal')
+    var isDraggingOpacity = false
 
     function renderMarkdown(content) {
       if (!content.trim()) {
@@ -373,13 +453,13 @@
 
     function setEditMode(enabled) {
       if (enabled) {
-        locked = false
+        isEditing = true
         viewEl.style.display = 'none'
         editEl.style.display = 'block'
         editEl.value = noteContent
         editEl.focus()
       } else {
-        locked = true
+        isEditing = false
         noteContent = editEl.value
         editEl.style.display = 'none'
         viewEl.style.display = 'block'
@@ -388,14 +468,38 @@
       }
     }
 
-    viewEl.addEventListener('dblclick', function() { setEditMode(true) })
+    viewEl.addEventListener('dblclick', function() {
+      if (!isLocked) setEditMode(true)
+    })
     editEl.addEventListener('blur', function() {
-      if (!locked) setEditMode(false)
+      if (isEditing) setEditMode(false)
     })
     editEl.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') { e.preventDefault(); setEditMode(false) }
     })
 
+    /* --- Lock button --- */
+    btnLock.addEventListener('click', function() {
+      isLocked = !isLocked
+      applyLockState()
+      ipcRenderer.send('sticky:set-lock', { id: noteId, locked: isLocked })
+    })
+
+    function applyLockState() {
+      if (isLocked) {
+        btnLock.textContent = '\uD83D\uDD12'
+        btnColor.classList.add('hidden')
+        btnClose.classList.add('hidden')
+        toolbarEl.style.setProperty('-webkit-app-region', 'no-drag', 'important')
+      } else {
+        btnLock.textContent = '\uD83D\uDD13'
+        btnColor.classList.remove('hidden')
+        btnClose.classList.remove('hidden')
+        toolbarEl.style.setProperty('-webkit-app-region', 'drag', 'important')
+      }
+    }
+
+    /* --- Color button --- */
     btnColor.addEventListener('click', function() {
       bodyEl.classList.remove('note-color-' + colorIdx)
       colorIdx = (colorIdx + 1) % 5
@@ -403,18 +507,52 @@
       ipcRenderer.send('sticky:set-color', { id: noteId, color: colorIdx })
     })
 
-    document.querySelector('.btn-close').addEventListener('click', function() {
+    btnClose.addEventListener('click', function() {
       ipcRenderer.send('sticky:close', { id: noteId })
     })
+
+    /* --- Opacity slider --- */
+    function updateOpacityUI(val) {
+      var pct = Math.round(val * 100)
+      opacityFill.style.width = pct + '%'
+      opacityThumb.style.left = pct + '%'
+      opacityValEl.textContent = pct + '%'
+    }
+
+    opacityTrack.addEventListener('mousedown', function(e) {
+      isDraggingOpacity = true
+      updateOpacityFromEvent(e)
+      e.preventDefault()
+    })
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDraggingOpacity) return
+      updateOpacityFromEvent(e)
+    })
+
+    document.addEventListener('mouseup', function() {
+      isDraggingOpacity = false
+    })
+
+    function updateOpacityFromEvent(e) {
+      var rect = opacityTrack.getBoundingClientRect()
+      var ratio = (e.clientX - rect.left) / rect.width
+      opacity = Math.max(0.1, Math.min(1.0, Math.round(ratio * 10) / 10))
+      updateOpacityUI(opacity)
+      ipcRenderer.send('sticky:set-opacity', { id: noteId, opacity: opacity })
+    }
 
     /* --- Context menu --- */
     function hideContextMenu() {
       ctxMenu.classList.remove('visible')
+      isDraggingOpacity = false
     }
 
     function showContextMenu(x, y) {
+      if (isLocked) return
       hideContextMenu()
-      var mw = 140, mh = 62
+      updateOpacityUI(opacity)
+      var mw = 180, mh = 130
       if (x + mw > window.innerWidth) x = window.innerWidth - mw - 4
       if (y + mh > window.innerHeight) y = window.innerHeight - mh - 4
       ctxMenu.style.left = x + 'px'
@@ -426,9 +564,11 @@
 
     document.addEventListener('click', function(e) {
       if (!ctxMenu.classList.contains('visible')) return
-      var action = e.target.closest('.context-menu-item')
-      if (!action) { hideContextMenu(); return }
-      var actionType = action.dataset.action
+      var actionItem = e.target.closest('.context-menu-item')
+      var sliderArea = e.target.closest('#opacitySlider')
+      if (sliderArea && !actionItem) return
+      if (!actionItem) { hideContextMenu(); return }
+      var actionType = actionItem.dataset.action
       hideContextMenu()
       if (actionType === 'delete') {
         ipcRenderer.send('sticky:delete', { id: noteId })
@@ -445,11 +585,14 @@
       noteId = data.id
       noteContent = data.content || ''
       colorIdx = data.color || 0
+      isLocked = data.locked === true
+      opacity = data.opacity != null ? data.opacity : 0.6
 
       document.documentElement.setAttribute('data-theme', data.theme || 'dark')
       bodyEl.classList.remove('note-color-0')
       bodyEl.classList.add('note-color-' + colorIdx)
 
+      applyLockState()
       renderMarkdown(noteContent)
 
       if (data.startEdit) {

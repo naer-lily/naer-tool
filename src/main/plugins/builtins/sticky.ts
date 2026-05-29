@@ -16,6 +16,8 @@ interface StickyNoteData {
   stayOnTop: boolean
   groupId: number
   color: number
+  opacity: number
+  locked: boolean
   createdAt: number
   updatedAt: number
 }
@@ -45,6 +47,8 @@ function loadStore(): void {
     store = Array.isArray(raw) ? raw : []
     for (const n of store) {
       if (n.color === undefined) n.color = 0
+      if (n.opacity === undefined) n.opacity = 1.0
+      if (n.locked === undefined) n.locked = false
     }
     logger.info('[sticky] loaded %d notes', store.length)
   } catch (e) {
@@ -105,7 +109,7 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
     transparent: false,
     backgroundColor: '#2d2d2d',
     alwaysOnTop: true,
-    resizable: true,
+    resizable: !note.locked,
     skipTaskbar: true,
     hasShadow: true,
     webPreferences: {
@@ -116,6 +120,7 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
   })
 
   win.setMinimumSize(200, 150)
+  win.setOpacity(note.opacity ?? 1.0)
 
   const htmlPath = join(app.getAppPath(), 'resources', 'sticky-note.html')
   win.loadURL(`file:///${htmlPath}`).catch(e =>
@@ -290,6 +295,30 @@ function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.on('sticky:set-opacity', (_event, { id, opacity }: { id: string; opacity: number }) => {
+    const note = store.find(n => n.id === id)
+    if (note) {
+      note.opacity = opacity
+      const win = windows.get(id)
+      if (win && !win.isDestroyed()) {
+        win.setOpacity(opacity)
+      }
+      saveStore()
+    }
+  })
+
+  ipcMain.on('sticky:set-lock', (_event, { id, locked }: { id: string; locked: boolean }) => {
+    const note = store.find(n => n.id === id)
+    if (note) {
+      note.locked = locked
+      const win = windows.get(id)
+      if (win && !win.isDestroyed()) {
+        win.setResizable(!locked)
+      }
+      saveStore()
+    }
+  })
+
   ipcMain.on('sticky:duplicate', (_event, { id, content }: { id: string; content: string }) => {
     const original = store.find(n => n.id === id)
     if (!original) return
@@ -305,6 +334,8 @@ function registerIpcHandlers(): void {
       stayOnTop: original.stayOnTop,
       groupId: currentGroup,
       color: original.color,
+      opacity: original.opacity ?? 1.0,
+      locked: false,
       createdAt: Date.now(),
       updatedAt: Date.now()
     }
@@ -319,6 +350,8 @@ function unregisterIpcHandlers(): void {
   ipcMain.removeAllListeners('sticky:close')
   ipcMain.removeAllListeners('sticky:delete')
   ipcMain.removeAllListeners('sticky:set-color')
+  ipcMain.removeAllListeners('sticky:set-opacity')
+  ipcMain.removeAllListeners('sticky:set-lock')
   ipcMain.removeAllListeners('sticky:duplicate')
   ipcHandlersRegistered = false
 }
@@ -326,6 +359,25 @@ function unregisterIpcHandlers(): void {
 function onBeforeQuit(): void {
   saveStoreNow()
   destroyAllWindows()
+}
+
+function createNoteData(content: string): StickyNoteData {
+  const pos = getDefaultPosition()
+  return {
+    id: generateId(),
+    content,
+    x: pos.x,
+    y: pos.y,
+    width: 300,
+    height: 250,
+    stayOnTop: true,
+    groupId: currentGroup,
+    color: 0,
+    opacity: 0.6,
+    locked: false,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  }
 }
 
 const plugin: IPlugin = {
@@ -413,6 +465,8 @@ const plugin: IPlugin = {
                 stayOnTop: item.stayOnTop !== false,
                 groupId: currentGroup,
                 color: item.color || 0,
+                opacity: item.opacity ?? 1.0,
+                locked: item.locked === true,
                 createdAt: Date.now(),
                 updatedAt: Date.now()
               })
@@ -454,7 +508,9 @@ const plugin: IPlugin = {
             width: n.width,
             height: n.height,
             stayOnTop: n.stayOnTop,
-            color: n.color
+            color: n.color,
+            opacity: n.opacity,
+            locked: n.locked
           }))
           writeFileSync(result.filePath, JSON.stringify(exportData, null, 2), 'utf-8')
           ctx.toast(`已导出 ${exportData.length} 个便签`)
@@ -494,20 +550,7 @@ const plugin: IPlugin = {
       icon: '➕',
       preview: '在屏幕中央创建空白便签',
       execute: (): CommandOutcome => {
-        const pos = getDefaultPosition()
-        const note: StickyNoteData = {
-          id: generateId(),
-          content: '',
-          x: pos.x,
-          y: pos.y,
-          width: 300,
-          height: 250,
-          stayOnTop: true,
-          groupId: currentGroup,
-          color: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        }
+        const note = createNoteData('')
         store.push(note)
         saveStore()
         createNoteWindow(note, true)
@@ -539,20 +582,7 @@ const plugin: IPlugin = {
       icon: '📝',
       preview,
       execute: (): CommandOutcome => {
-        const pos = getDefaultPosition()
-        const note: StickyNoteData = {
-          id: generateId(),
-          content: trimmed,
-          x: pos.x,
-          y: pos.y,
-          width: 300,
-          height: 250,
-          stayOnTop: true,
-          groupId: currentGroup,
-          color: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        }
+        const note = createNoteData(trimmed)
         store.push(note)
         saveStore()
         createNoteWindow(note, false)
