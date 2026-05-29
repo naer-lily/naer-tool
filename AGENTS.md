@@ -25,13 +25,14 @@ Renderer (useAppState — 唯一状态机):
 
 | Signal | 触发时机 | Renderer 响应 |
 |--------|---------|-------------|
-| `shortcut-pressed { autoActivate? }` | 全局快捷键 | idle→SHOW(home/subcommand); visible→HIDE |
-| `tray-clicked` | 托盘点击 | idle→SHOW; visible→HIDE |
+| `shortcut-pressed { autoActivate? }` | 全局快捷键 | idle→SHOW(home/subcommand/resume); visible→save+HIDE |
+| `tray-clicked` | 托盘点击 | idle→SHOW; visible→save+HIDE |
 | `second-instance` | 第二个实例启动 | idle→SHOW; visible→无视 |
-| `window-blurred` | 主窗口失焦 | home/subcommand→HIDE; webview-*→无视 |
+| `window-blurred` | 主窗口失焦 | home/subcommand→save+HIDE; webview-*→save+HIDE; idle→无视 |
 | `webview-opened { height, icon }` | WebView 创建 | subcommand→webview-loading |
 | `webview-ready` | WebView DOM 就绪 | webview-loading→webview-active |
-| `webview-closed { data? }` | WebView 关闭 | webview-*→home |
+| `webview-closed { data? }` | WebView 关闭 | webview-*→home; idle→清除 pending resumeWebView |
+| `webview-message { data? }` | WebView 发来数据 | 无视（仅 WebView closePromise 内部处理） |
 
 ### Core Model: Execute-and-Close
 
@@ -75,35 +76,41 @@ Main process (SearchWindow):          Renderer (Vue + useAppState):
 ## Directory Architecture
 ```
 src/main/        Electron main process — NO DOM access
-  index.ts          Entry: app lifecycle, builtin plugin registration, shortcut (→signalShow), config bootstrap
+  index.ts          Entry: app lifecycle, builtin plugin registration, shortcut (→signalShow), config bootstrap, auto-updater
   search-window.ts  **无状态窗口壳** — BrowserWindow 创建/持有、show/hide 纯机械操作、sendSignal 统一出口、checkAutoActivate
-  window-manager.ts SearchWindow 的薄门面 — 所有外部模块通过此访问窗口能力
-  search-engine.ts  Search dispatch (prefix/subcommand/fallback/home) + execute with shouldClose tracking
-  plugin-host.ts    Plugin lifecycle (load/unload/reload/loadFromPath)
-  prefix-registry.ts Prefix → pluginId mapping
-  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/SHOW_WINDOW/HIDE_WINDOW/WebView/LOG/CONFIG)
+  window-manager.ts SearchWindow 的薄门面 — 所有外部模块通过此访问窗口能力（含 scale 缩放相关工具方法）
+  search-engine.ts  Search dispatch (prefix/subcommand/fallback/home) + execute（注入 pluginIcon 到 WebViewConfig、追踪 outcome）
+  plugin-host.ts    Plugin lifecycle (load/unload/reload/loadFromPath), esbuild ts→js 转换, enabledBuiltins 过滤
+  prefix-registry.ts Prefix → pluginId mapping, rebuild
+  ipc-handlers.ts   IPC handler registration (SEARCH/EXECUTE/SHOW_WINDOW/HIDE_WINDOW/WebView/LOG/CONFIG/FORM/THEME/CONTEXT_ACTION 等)
   toast.ts          Screen-bottom toast via data-URL BrowserWindow
-  tray.ts           系统托盘 — 点击发送 tray-clicked signal (不再调用 toggleWindow)
+  tray.ts           系统托盘 — 点击发送 tray-clicked signal, 右键菜单含更新入口
   web-view-manager.ts WebContentsView lifecycle (open/close/resize/input-forward), preload building
   form-dialog.ts    Form dialog (frameless BrowserWindow, custom title bar, CSS drag region)
-  config.ts         ~/.futari/config.json manager (load/save/getRaw/patch)
+  config.ts         ~/.futari/config.json manager (load/save/getRaw/patch), defaults: Alt+Space/dark/launch false
   logger.ts         Main process logger (electron-log → ~/.futari/logs/main.log)
+  auto-updater.ts   GitHub Release 更新检测与安装 (naer-lily/futari, zip 下载, PowerShell 替换脚本)
+  companion-manager.ts 插件子进程管理 (jsonl stdout / http health check 两种模式)
   plugins/
-    builtins/       Built-in plugins (calculator, run, plugin-creator, settings, ctool)
+    builtins/       Built-in plugins (calculator, run, plugin-creator, settings, ctool, everything, bookmark, sticky)
 src/preload/     contextBridge — exposes typed futariAPI (onAppEvent, showWindow, hideWindow, search, execute...)
 src/renderer/    Vue 3 SPA — NO Node.js access
   src/
-    App.vue           Root component (search container, webview placeholder, toast)
-    components/       SearchInput, ResultList
+    App.vue           Root component (search container, webview placeholder, toast, context menu)
+    env.d.ts          Vue SFC type declarations
+    components/       SearchInput, ResultList, ResultItem
     composables/      **useAppState** (唯一状态机), useSearch (IPC bridge), useKeyboardNav, useTheme
+    styles/           variables.css (CSS 自定义属性: light/dark 主题)
     utils/logger.ts   Renderer logger (console + IPC forward to main log file)
 src/shared/      Types and constants usable by both main + renderer
   ipc-channels.ts    IPC 通道常量 + AppSignalType 联合类型 + AppSignalPayload
-resources/       web-view-preload.js, settings.html (builtin preload + settings WebView page)
+  plugin-api.ts      Plugin 系统类型 (ICommand, IPlugin, CommandContext, SearchResult, CompanionConfig 等)
+  web-view-api.ts    WebViewConfig 接口定义
+resources/       web-view-preload.js, settings.html, sticky-note.html, icon.png + ico (builtin preload + settings/sticky WebView pages)
 types/           futari-plugin-types local npm package (plugin TypeScript typings)
 docs/            plugin-development.md (plugin author tutorial)
 ```
-- `src/main/` owns: plugin loading, tray, global shortcuts, **资源持有 (BrowserWindow)**, WebView lifecycle, **机械操作执行**
+- `src/main/` owns: plugin loading, tray, global shortcuts, **资源持有 (BrowserWindow)**, WebView lifecycle, **机械操作执行**, auto-updater, companion management
 - `src/renderer/` owns: **所有状态决策**、search UI、keyboard navigation、theme rendering、**何时 show/hide/resize**
 - Communication: `ipcRenderer` ↔ `ipcMain` via channels defined in `src/shared/ipc-channels.ts`
 
@@ -138,22 +145,25 @@ EXIT_SUBCOMMAND         → subcommand → home
 WEBVIEW_OPEN            → subcommand → webview-loading
 WEBVIEW_READY           → webview-loading → webview-active
 WEBVIEW_CLOSE           → webview-loading/webview-active → home
+RESUME_WEBVIEW          → idle → webview-active (恢复之前保存的 WebView)
 ```
 
 ### Signal → Internal Event Mapping (handleSignal)
 ```
 idle:
-  shortcut-pressed/tray-clicked/second-instance → SHOW → home (or subcommand if autoActivate)
+  shortcut-pressed/tray-clicked/second-instance → RESUME_WEBVIEW (if pending) or SHOW → home (or subcommand if autoActivate)
   window-blurred → ignore
 
 home / subcommand:
   shortcut-pressed/tray-clicked → HIDE → idle
   second-instance → ignore (already visible)
   window-blurred → HIDE → idle
+  (subcommand 时额外保存 resumeSubcommand, 下次 SHOW 直接恢复)
 
 webview-loading / webview-active:
-  shortcut-pressed/tray-clicked → WEBVIEW_CLOSE + HIDE → idle
-  window-blurred → ignore (不打断 WebView 交互)
+  shortcut-pressed/tray-clicked → save resumeWebView + HIDE → idle (下次 SHOW 恢复 WebView)
+  second-instance → ignore
+  window-blurred → save resumeWebView + HIDE → idle
   webview-opened/ready/closed → 相应 transition
 ```
 
@@ -186,8 +196,15 @@ Set to `true` in `selectResult()` before `await execute()`, cleared after. Signa
 
 点击其他应用 (blur)
   → Main: sendSignal('window-blurred')
-  → Renderer: home/subcommand → futariAPI.hideWindow() → HIDE → idle
-              webview-* → 无视 (保护 WebView 交互)
+  → Renderer: home/subcommand → save resumeSubcommand + futariAPI.hideWindow() → HIDE → idle
+              webview-* → save resumeWebView + futariAPI.hideWindow() → HIDE → idle
+              idle → 无视
+
+再次 Alt+Space (从 idle 恢复)
+  → Renderer: idle + shortcut-pressed
+              → 有 resumeWebView → RESUME_WEBVIEW → webview-active (恢复之前的 WebView)
+              → 有 resumeSubcommand → SHOW(autoActivate) → subcommand (恢复之前的子命令)
+              → 都无 → SHOW → home (全新首页)
 ```
 
 ## WebView Lifecycle (Critical)
@@ -297,7 +314,7 @@ interface WebViewConfig {
 - Built-in plugins live in `src/main/plugins/builtins/`, imported at startup via `registerBuiltin()`
 - User plugins live under `~/.futari/plugins/<plugin-name>/` — each directory must contain a `package.json` with `"main"` pointing to the entry `.js`
 - At startup and on reload, `pluginHost.scanAndLoadUserPlugins()` scans `~/.futari/plugins/` for subdirectories with `package.json`, `require()`s them, and registers in the plugin map
-- Config file `~/.futari/config.json` stores only: `shortcut`, `theme` (no plugin paths)
+- Config file `~/.futari/config.json` stores: `shortcut`, `theme`, `launchAtStartup`, `windowTopRatio`, `windowWidth`, `scale`, `enabledPlugins`, `lastUpdateCheck`, `skipVersion`
 - Plugin-creator (`Create Plugin`) scaffolds new user plugins directly into `~/.futari/plugins/<name>/` — no folder selection or config editing needed
 - Reload command calls `scanAndLoadUserPlugins()` which unloads all user plugins (with try-catch per plugin) then rescans and reloads
 - `pluginHost.loadFromPath(dir)`: resolves via `package.json.main`, `delete require.cache`, `require()`s the module, calls `onActivate`, registers in map. Conflicts: unloads existing plugin with same ID first.
@@ -431,7 +448,7 @@ showWindow(): setOpacity(0) → show() → focus() → setImmediate(applyBounds 
 - `npm run build` — production build
 - `npm run lint` — vue-tsc type-check (main + web configs)
 - Log file: `tail -f ~/.futari/logs/main.log`
-- `npm run package` — build + electron-builder portable exe → `dist/Futari-*-portable.exe`
+- `npm run package` — build + electron-builder → `dist/Futari-*-win32-x64.zip`
 
 ## Build Config (`package.json` → `"build"`)
 - `icon`: `resources/icon.png` — electron-builder 会自动生成各平台格式 (Windows .ico 等)
@@ -440,5 +457,5 @@ showWindow(): setOpacity(0) → show() → focus() → setImmediate(applyBounds 
 ## Version & Release Rules
 - **Only bump version when explicitly asked by the user**
 - When bumping: update `package.json` version, `git commit`, `git tag vX.Y.Z`, `git push --tags`
-- CI (`.github/workflows/release.yml`) triggers on `v*` tag push → builds portable exe → creates GitHub Release
+- CI (`.github/workflows/release.yml`) triggers on `v*` tag push → builds zip → creates GitHub Release
 - Requires `setup-python@v5` with `python-version: '3.11'` for `node-gyp` native module rebuild
