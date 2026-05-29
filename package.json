@@ -1,6 +1,6 @@
 {
   "name": "futari",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Futari - Plugin-based command launcher",
   "main": "./out/main/index.js",
   "scripts": {

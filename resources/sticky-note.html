@@ -303,6 +303,8 @@
     margin: 4px 0;
   }
 
+  .ctx-hidden { display: none; }
+
   .context-menu-slider {
     padding: 6px 12px;
     display: flex;
@@ -362,11 +364,14 @@
   <textarea class="edit-mode" placeholder="输入 Markdown..."></textarea>
 </div>
 <div class="context-menu" id="ctxMenu">
-  <div class="context-menu-item" data-action="duplicate">&#x1F4CB; 复制便签</div>
-  <div class="context-menu-separator"></div>
-  <div class="context-menu-item" data-action="delete">&#x1F5D1; 删除</div>
-  <div class="context-menu-separator"></div>
-  <div class="context-menu-slider" id="opacitySlider">
+  <div class="context-menu-item img-item" data-action="copy-image">&#x1F5BC; 复制图片</div>
+  <div class="context-menu-item img-item" data-action="copy-image-path">&#x1F4CB; 复制路径</div>
+  <div class="context-menu-separator" id="sepImgAfter"></div>
+  <div class="context-menu-item note-item" data-action="duplicate">&#x1F4CB; 复制便签</div>
+  <div class="context-menu-separator note-item" id="sepNote"></div>
+  <div class="context-menu-item note-item" data-action="delete">&#x1F5D1; 删除</div>
+  <div class="context-menu-separator note-item" id="sepOpacity"></div>
+  <div class="context-menu-slider note-item" id="opacitySlider">
     <span class="context-menu-slider-label">不透明度</span>
     <div class="context-menu-slider-track" id="opacityTrack">
       <div class="context-menu-slider-fill" id="opacityFill"></div>
@@ -378,8 +383,16 @@
 <script>
   (function() {
     var ipcRenderer = require('electron').ipcRenderer
+    var shell = require('electron').shell
+    var clipboard = require('electron').clipboard
+    var nativeImage = require('electron').nativeImage
+    var fs = require('fs')
+    var path = require('path')
+    var os = require('os')
     var marked = require('marked')
     marked.setOptions({ gfm: true, breaks: false })
+
+    var IMG_DIR = path.join(os.homedir(), '.futari', 'sticky-images')
 
     var noteId = ''
     var noteContent = ''
@@ -397,6 +410,7 @@
     var toolbarRightEl = document.getElementById('toolbarRightEl')
     var bodyEl = document.body
     var ctxMenu = document.getElementById('ctxMenu')
+    var imgSrc = ''
 
     var opacityTrack = document.getElementById('opacityTrack')
     var opacityFill = document.getElementById('opacityFill')
@@ -427,6 +441,11 @@
           checkboxes[j].addEventListener('change', handleCheckboxChange)
         }
       }
+
+      var links = viewEl.querySelectorAll('a')
+      for (var k = 0; k < links.length; k++) {
+        links[k].addEventListener('click', handleLinkClick)
+      }
     }
 
     function handleCheckboxChange(e) {
@@ -445,6 +464,14 @@
       renderMarkdown(noteContent)
       viewEl.scrollTop = scrollTop
       saveContent()
+    }
+
+    function handleLinkClick(e) {
+      e.preventDefault()
+      var href = e.currentTarget.getAttribute('href')
+      if (href && !/^(javascript|data):/i.test(href)) {
+        shell.openExternal(href)
+      }
     }
 
     function saveContent() {
@@ -476,6 +503,22 @@
     })
     editEl.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') { e.preventDefault(); setEditMode(false) }
+    })
+
+    editEl.addEventListener('paste', function(e) {
+      var img = clipboard.readImage()
+      if (img.isEmpty()) return
+      e.preventDefault()
+      try { fs.mkdirSync(IMG_DIR, { recursive: true }) } catch (_) {}
+      var filename = 'note_' + noteId.split('_').pop() + '_' + Date.now() + '.png'
+      var filepath = path.join(IMG_DIR, filename)
+      fs.writeFileSync(filepath, img.toPNG())
+      var mdImg = '![](' + 'file:///' + filepath.replace(/\\/g, '/') + ')'
+      var start = editEl.selectionStart
+      editEl.value = noteContent.slice(0, start) + mdImg + noteContent.slice(editEl.selectionEnd)
+      noteContent = editEl.value
+      editEl.selectionStart = editEl.selectionEnd = start + mdImg.length
+      saveContent()
     })
 
     /* --- Lock button --- */
@@ -548,9 +591,22 @@
       isDraggingOpacity = false
     }
 
+    function setMenuMode(isImage) {
+      var imgItems = ctxMenu.querySelectorAll('.img-item')
+      var noteItems = ctxMenu.querySelectorAll('.note-item')
+      if (isImage) {
+        for (var i = 0; i < imgItems.length; i++) imgItems[i].classList.remove('ctx-hidden')
+        for (var j = 0; j < noteItems.length; j++) noteItems[j].classList.add('ctx-hidden')
+      } else {
+        for (var k = 0; k < imgItems.length; k++) imgItems[k].classList.add('ctx-hidden')
+        for (var m = 0; m < noteItems.length; m++) noteItems[m].classList.remove('ctx-hidden')
+      }
+    }
+
     function showContextMenu(x, y) {
       if (isLocked) return
       hideContextMenu()
+      setMenuMode(false)
       updateOpacityUI(opacity)
       var mw = 180, mh = 130
       if (x + mw > window.innerWidth) x = window.innerWidth - mw - 4
@@ -560,7 +616,21 @@
       ctxMenu.classList.add('visible')
     }
 
+    function showImageContextMenu(x, y, src) {
+      if (isLocked) return
+      hideContextMenu()
+      setMenuMode(true)
+      imgSrc = src
+      var mh = 80
+      if (x + 160 > window.innerWidth) x = window.innerWidth - 164
+      if (y + mh > window.innerHeight) y = window.innerHeight - mh - 4
+      ctxMenu.style.left = x + 'px'
+      ctxMenu.style.top = y + 'px'
+      ctxMenu.classList.add('visible')
+    }
+
     window.__showStickyContextMenu = showContextMenu
+    window.__showImageContextMenu = showImageContextMenu
 
     document.addEventListener('click', function(e) {
       if (!ctxMenu.classList.contains('visible')) return
@@ -574,6 +644,11 @@
         ipcRenderer.send('sticky:delete', { id: noteId })
       } else if (actionType === 'duplicate') {
         ipcRenderer.send('sticky:duplicate', { id: noteId, content: noteContent })
+      } else if (actionType === 'copy-image') {
+        var localPath = imgSrc.replace('file:///', process.platform === 'win32' ? '' : '/')
+        try { clipboard.writeImage(nativeImage.createFromPath(decodeURI(localPath))) } catch (_) {}
+      } else if (actionType === 'copy-image-path') {
+        clipboard.writeText(imgSrc)
       }
     })
 

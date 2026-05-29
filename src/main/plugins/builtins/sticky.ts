@@ -129,9 +129,15 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
 
   win.webContents.on('context-menu', (e, params) => {
     e.preventDefault()
-    win.webContents.executeJavaScript(`
-      if (window.__showStickyContextMenu) window.__showStickyContextMenu(${params.x}, ${params.y})
-    `).catch(() => {})
+    if (params.mediaType === 'image' && params.srcURL) {
+      win.webContents.executeJavaScript(`
+        if (window.__showImageContextMenu) window.__showImageContextMenu(${params.x}, ${params.y}, ${JSON.stringify(params.srcURL)})
+      `).catch(() => {})
+    } else {
+      win.webContents.executeJavaScript(`
+        if (window.__showStickyContextMenu) window.__showStickyContextMenu(${params.x}, ${params.y})
+      `).catch(() => {})
+    }
   })
 
   win.webContents.on('did-finish-load', () => {
