@@ -18,6 +18,8 @@
     --note-danger-hover: #5c1a1a;
     --note-danger-text: #f38ba8;
     --note-empty: #555;
+    --note-menu-bg: #2d2d2d;
+    --note-menu-hover: #3a3a3a;
   }
 
   [data-theme="light"] {
@@ -33,6 +35,8 @@
     --note-danger-hover: #fdd;
     --note-danger-text: #c0392b;
     --note-empty: #aaa;
+    --note-menu-bg: #f5f5f5;
+    --note-menu-hover: #e8e8e8;
   }
 
   [data-theme="dark"] {
@@ -48,6 +52,8 @@
     --note-danger-hover: #5c1a1a;
     --note-danger-text: #f38ba8;
     --note-empty: #555;
+    --note-menu-bg: #2d2d2d;
+    --note-menu-hover: #3a3a3a;
   }
 
   /* Color 1: Warm Yellow */
@@ -55,11 +61,13 @@
     --note-bg: #fffde7; --note-text: #3e3500; --note-toolbar-bg: #fff9c4;
     --note-border: #fdd835; --note-muted: #9e8c00; --note-code-bg: #fff176;
     --note-pre-bg: #fff9c4; --note-hover: #fff176; --note-empty: #b8a000;
+    --note-menu-bg: #fff9c4; --note-menu-hover: #fff176;
   }
   [data-theme="dark"] .note-color-1 {
     --note-bg: #4a3800; --note-text: #fff9c4; --note-toolbar-bg: #3b2d00;
     --note-border: #6d5600; --note-muted: #b8a400; --note-code-bg: #5c4600;
     --note-pre-bg: #3b2d00; --note-hover: #5c4600; --note-empty: #8a7a00;
+    --note-menu-bg: #3b2d00; --note-menu-hover: #5c4600;
   }
 
   /* Color 2: Light Blue */
@@ -67,11 +75,13 @@
     --note-bg: #e3f2fd; --note-text: #00254d; --note-toolbar-bg: #bbdefb;
     --note-border: #64b5f6; --note-muted: #4f7aa4; --note-code-bg: #90caf9;
     --note-pre-bg: #bbdefb; --note-hover: #90caf9; --note-empty: #6a8eb8;
+    --note-menu-bg: #bbdefb; --note-menu-hover: #90caf9;
   }
   [data-theme="dark"] .note-color-2 {
     --note-bg: #002d55; --note-text: #bbdefb; --note-toolbar-bg: #002144;
     --note-border: #0050a0; --note-muted: #6a9ec8; --note-code-bg: #003a6b;
     --note-pre-bg: #002144; --note-hover: #003a6b; --note-empty: #406a90;
+    --note-menu-bg: #002144; --note-menu-hover: #003a6b;
   }
 
   /* Color 3: Light Green */
@@ -79,11 +89,13 @@
     --note-bg: #e8f5e9; --note-text: #002a00; --note-toolbar-bg: #c8e6c9;
     --note-border: #81c784; --note-muted: #5a8a5c; --note-code-bg: #a5d6a7;
     --note-pre-bg: #c8e6c9; --note-hover: #a5d6a7; --note-empty: #6a9a6c;
+    --note-menu-bg: #c8e6c9; --note-menu-hover: #a5d6a7;
   }
   [data-theme="dark"] .note-color-3 {
     --note-bg: #142a14; --note-text: #c8e6c9; --note-toolbar-bg: #0e200e;
     --note-border: #2a5a2a; --note-muted: #6aaa6c; --note-code-bg: #1d3d1d;
     --note-pre-bg: #0e200e; --note-hover: #1d3d1d; --note-empty: #4a7a4c;
+    --note-menu-bg: #0e200e; --note-menu-hover: #1d3d1d;
   }
 
   /* Color 4: Soft Pink */
@@ -91,11 +103,13 @@
     --note-bg: #fce4ec; --note-text: #3d0010; --note-toolbar-bg: #f8bbd0;
     --note-border: #f06292; --note-muted: #a04060; --note-code-bg: #f48fb1;
     --note-pre-bg: #f8bbd0; --note-hover: #f48fb1; --note-empty: #c06080;
+    --note-menu-bg: #f8bbd0; --note-menu-hover: #f48fb1;
   }
   [data-theme="dark"] .note-color-4 {
     --note-bg: #4a1525; --note-text: #f8bbd0; --note-toolbar-bg: #3b101d;
     --note-border: #802a40; --note-muted: #c06080; --note-code-bg: #5d1d30;
     --note-pre-bg: #3b101d; --note-hover: #5d1d30; --note-empty: #904060;
+    --note-menu-bg: #3b101d; --note-menu-hover: #5d1d30;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -113,7 +127,7 @@
 
   .toolbar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     height: 30px;
     padding: 0 8px;
@@ -122,12 +136,6 @@
     user-select: none;
     border-bottom: 1px solid var(--note-border);
     transition: background 0.2s;
-  }
-
-  .drag-title {
-    font-size: 11px;
-    color: var(--note-muted);
-    font-weight: 500;
   }
 
   .toolbar-buttons {
@@ -153,7 +161,6 @@
   }
 
   .toolbar-btn:hover { background: var(--note-hover); color: var(--note-text); }
-  .toolbar-btn.active { color: var(--note-accent); }
   .toolbar-btn.danger:hover { background: var(--note-danger-hover); color: var(--note-danger-text); }
 
   .content-area {
@@ -247,22 +254,58 @@
     padding-top: 60px;
     user-select: none;
   }
+
+  /* Context menu */
+  .context-menu {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    background: var(--note-menu-bg);
+    border: 1px solid var(--note-border);
+    border-radius: 6px;
+    padding: 4px 0;
+    min-width: 140px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    user-select: none;
+  }
+
+  .context-menu.visible { display: block; }
+
+  .context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--note-text);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .context-menu-item:hover { background: var(--note-menu-hover); }
+
+  .context-menu-separator {
+    height: 1px;
+    background: var(--note-border);
+    margin: 4px 0;
+  }
 </style>
 </head>
 <body class="note-color-0">
 <div class="toolbar">
-  <span class="drag-title">便签</span>
   <div class="toolbar-buttons">
-    <button class="toolbar-btn btn-ontop active" title="置顶">&#x1F4CC;</button>
     <button class="toolbar-btn btn-color" title="换色">&#x1F3A8;</button>
-    <button class="toolbar-btn btn-lock" title="编辑">&#x1F512;</button>
-    <button class="toolbar-btn danger btn-delete" title="删除">&#x1F5D1;</button>
     <button class="toolbar-btn danger btn-close" title="关闭">&#x2715;</button>
   </div>
 </div>
 <div class="content-area">
-  <div class="view-mode rendered locked"></div>
+  <div class="view-mode rendered"></div>
   <textarea class="edit-mode" placeholder="输入 Markdown..."></textarea>
+</div>
+<div class="context-menu" id="ctxMenu">
+  <div class="context-menu-item" data-action="duplicate">&#x1F4CB; 复制便签</div>
+  <div class="context-menu-separator"></div>
+  <div class="context-menu-item" data-action="delete">&#x1F5D1; 删除</div>
 </div>
 <script>
   (function() {
@@ -273,15 +316,13 @@
     var noteId = ''
     var noteContent = ''
     var locked = true
-    var stayOnTop = true
     var colorIdx = 0
 
     var viewEl = document.querySelector('.view-mode')
     var editEl = document.querySelector('.edit-mode')
-    var btnLock = document.querySelector('.btn-lock')
-    var btnOnTop = document.querySelector('.btn-ontop')
     var btnColor = document.querySelector('.btn-color')
     var bodyEl = document.body
+    var ctxMenu = document.getElementById('ctxMenu')
 
     function renderMarkdown(content) {
       if (!content.trim()) {
@@ -300,6 +341,7 @@
         }
       }
       for (var j = 0; j < checkboxes.length; j++) {
+        checkboxes[j].removeAttribute('disabled')
         if (j < cbLines.length) {
           checkboxes[j].dataset.lineIndex = cbLines[j]
           checkboxes[j].addEventListener('change', handleCheckboxChange)
@@ -336,8 +378,6 @@
         editEl.style.display = 'block'
         editEl.value = noteContent
         editEl.focus()
-        btnLock.textContent = '\u270F\uFE0F'
-        btnLock.classList.add('active')
       } else {
         locked = true
         noteContent = editEl.value
@@ -345,24 +385,15 @@
         viewEl.style.display = 'block'
         renderMarkdown(noteContent)
         saveContent()
-        btnLock.textContent = '\uD83D\uDD12'
-        btnLock.classList.remove('active')
       }
     }
 
-    btnLock.addEventListener('click', function() { setEditMode(locked) })
     viewEl.addEventListener('dblclick', function() { setEditMode(true) })
     editEl.addEventListener('blur', function() {
       if (!locked) setEditMode(false)
     })
     editEl.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') { e.preventDefault(); setEditMode(false) }
-    })
-
-    btnOnTop.addEventListener('click', function() {
-      stayOnTop = !stayOnTop
-      btnOnTop.classList.toggle('active', stayOnTop)
-      ipcRenderer.send('sticky:toggle-ontop', { id: noteId, stayOnTop: stayOnTop })
     })
 
     btnColor.addEventListener('click', function() {
@@ -376,21 +407,49 @@
       ipcRenderer.send('sticky:close', { id: noteId })
     })
 
-    document.querySelector('.btn-delete').addEventListener('click', function() {
-      ipcRenderer.send('sticky:delete', { id: noteId })
+    /* --- Context menu --- */
+    function hideContextMenu() {
+      ctxMenu.classList.remove('visible')
+    }
+
+    function showContextMenu(x, y) {
+      hideContextMenu()
+      var mw = 140, mh = 62
+      if (x + mw > window.innerWidth) x = window.innerWidth - mw - 4
+      if (y + mh > window.innerHeight) y = window.innerHeight - mh - 4
+      ctxMenu.style.left = x + 'px'
+      ctxMenu.style.top = y + 'px'
+      ctxMenu.classList.add('visible')
+    }
+
+    window.__showStickyContextMenu = showContextMenu
+
+    document.addEventListener('click', function(e) {
+      if (!ctxMenu.classList.contains('visible')) return
+      var action = e.target.closest('.context-menu-item')
+      if (!action) { hideContextMenu(); return }
+      var actionType = action.dataset.action
+      hideContextMenu()
+      if (actionType === 'delete') {
+        ipcRenderer.send('sticky:delete', { id: noteId })
+      } else if (actionType === 'duplicate') {
+        ipcRenderer.send('sticky:duplicate', { id: noteId, content: noteContent })
+      }
+    })
+
+    window.addEventListener('blur', function() {
+      hideContextMenu()
     })
 
     window.__initStickyNote = function(data) {
       noteId = data.id
       noteContent = data.content || ''
-      stayOnTop = data.stayOnTop !== false
       colorIdx = data.color || 0
 
       document.documentElement.setAttribute('data-theme', data.theme || 'dark')
       bodyEl.classList.remove('note-color-0')
       bodyEl.classList.add('note-color-' + colorIdx)
 
-      btnOnTop.classList.toggle('active', stayOnTop)
       renderMarkdown(noteContent)
 
       if (data.startEdit) {

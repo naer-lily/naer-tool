@@ -104,7 +104,7 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
     frame: false,
     transparent: false,
     backgroundColor: '#2d2d2d',
-    alwaysOnTop: note.stayOnTop,
+    alwaysOnTop: true,
     resizable: true,
     skipTaskbar: true,
     hasShadow: true,
@@ -122,6 +122,13 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
     logger.error('[sticky] failed to load note window:', e)
   )
 
+  win.webContents.on('context-menu', (e, params) => {
+    e.preventDefault()
+    win.webContents.executeJavaScript(`
+      if (window.__showStickyContextMenu) window.__showStickyContextMenu(${params.x}, ${params.y})
+    `).catch(() => {})
+  })
+
   win.webContents.on('did-finish-load', () => {
     const theme = configManager.getTheme()
     win.webContents.executeJavaScript(`
@@ -132,11 +139,11 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
   let moveTimer: ReturnType<typeof setTimeout> | null = null
   win.on('moved', () => {
     if (win.isDestroyed()) return
-    const [x, y] = win.getPosition()
+    const b = win.getBounds()
     const idx = store.findIndex(n => n.id === note.id)
     if (idx !== -1) {
-      store[idx].x = x
-      store[idx].y = y
+      store[idx].x = b.x
+      store[idx].y = b.y
       if (moveTimer) clearTimeout(moveTimer)
       moveTimer = setTimeout(() => saveStore(), 500)
     }
@@ -145,11 +152,11 @@ function createNoteWindow(note: StickyNoteData, startEdit = false): BrowserWindo
   let resizeTimer: ReturnType<typeof setTimeout> | null = null
   win.on('resize', () => {
     if (win.isDestroyed()) return
-    const [w, h] = win.getSize()
+    const b = win.getBounds()
     const idx = store.findIndex(n => n.id === note.id)
     if (idx !== -1) {
-      store[idx].width = w
-      store[idx].height = h
+      store[idx].width = b.width
+      store[idx].height = b.height
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => saveStore(), 500)
     }
@@ -169,6 +176,25 @@ function destroyNoteWindow(id: string): void {
     win.close()
   }
   windows.delete(id)
+  checkGroupVisibility()
+}
+
+function checkGroupVisibility(): void {
+  const hasVisible = Array.from(windows.values()).some(w => {
+    if (w.isDestroyed()) return false
+    const note = store.find(n => n.id === getNoteIdFromWindow(w))
+    return note?.groupId === currentGroup
+  })
+  if (!hasVisible) {
+    groupVisible = false
+  }
+}
+
+function getNoteIdFromWindow(win: BrowserWindow): string | undefined {
+  for (const [id, w] of windows) {
+    if (w === win) return id
+  }
+  return undefined
 }
 
 function restoreWindows(): void {
@@ -190,6 +216,7 @@ function hideAllInGroup(groupId: number): void {
 }
 
 function showAllInGroup(groupId: number): void {
+  groupVisible = true
   for (const note of store) {
     if (note.groupId === groupId) {
       const win = windows.get(note.id)
@@ -255,18 +282,6 @@ function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.on('sticky:toggle-ontop', (_event, { id, stayOnTop }: { id: string; stayOnTop: boolean }) => {
-    const note = store.find(n => n.id === id)
-    if (note) {
-      note.stayOnTop = stayOnTop
-      const win = windows.get(id)
-      if (win && !win.isDestroyed()) {
-        win.setAlwaysOnTop(stayOnTop)
-      }
-      saveStore()
-    }
-  })
-
   ipcMain.on('sticky:set-color', (_event, { id, color }: { id: string; color: number }) => {
     const note = store.find(n => n.id === id)
     if (note) {
@@ -274,14 +289,37 @@ function registerIpcHandlers(): void {
       saveStore()
     }
   })
+
+  ipcMain.on('sticky:duplicate', (_event, { id, content }: { id: string; content: string }) => {
+    const original = store.find(n => n.id === id)
+    if (!original) return
+    const offset = windows.size
+    const pos = getDefaultPosition(offset)
+    const dup: StickyNoteData = {
+      id: generateId(),
+      content: content,
+      x: pos.x,
+      y: pos.y,
+      width: original.width,
+      height: original.height,
+      stayOnTop: original.stayOnTop,
+      groupId: currentGroup,
+      color: original.color,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }
+    store.push(dup)
+    saveStore()
+    createNoteWindow(dup, false)
+  })
 }
 
 function unregisterIpcHandlers(): void {
   ipcMain.removeAllListeners('sticky:save')
   ipcMain.removeAllListeners('sticky:close')
   ipcMain.removeAllListeners('sticky:delete')
-  ipcMain.removeAllListeners('sticky:toggle-ontop')
   ipcMain.removeAllListeners('sticky:set-color')
+  ipcMain.removeAllListeners('sticky:duplicate')
   ipcHandlersRegistered = false
 }
 
@@ -315,33 +353,6 @@ const plugin: IPlugin = {
   async buildCommands(_ctx: PluginContext, input: string): Promise<ICommand[]> {
     const subInput = input.trim().toLowerCase()
     const commands: ICommand[] = []
-
-    commands.push({
-      id: 'new',
-      name: '新建便签',
-      icon: '➕',
-      preview: '在屏幕中央创建空白便签',
-      execute: (): CommandOutcome => {
-        const pos = getDefaultPosition()
-        const note: StickyNoteData = {
-          id: generateId(),
-          content: '',
-          x: pos.x,
-          y: pos.y,
-          width: 300,
-          height: 250,
-          stayOnTop: true,
-          groupId: currentGroup,
-          color: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        }
-        store.push(note)
-        saveStore()
-        createNoteWindow(note, true)
-        return 'close'
-      }
-    })
 
     for (let i = 1; i <= 5; i++) {
       const isCurrent = i === currentGroup
@@ -473,6 +484,33 @@ const plugin: IPlugin = {
         store = store.filter(n => n.groupId !== currentGroup)
         saveStore()
         ctx.toast(`已删除 ${count} 个便签`)
+        return 'close'
+      }
+    })
+
+    commands.push({
+      id: 'new',
+      name: '新建便签',
+      icon: '➕',
+      preview: '在屏幕中央创建空白便签',
+      execute: (): CommandOutcome => {
+        const pos = getDefaultPosition()
+        const note: StickyNoteData = {
+          id: generateId(),
+          content: '',
+          x: pos.x,
+          y: pos.y,
+          width: 300,
+          height: 250,
+          stayOnTop: true,
+          groupId: currentGroup,
+          color: 0,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        }
+        store.push(note)
+        saveStore()
+        createNoteWindow(note, true)
         return 'close'
       }
     })
